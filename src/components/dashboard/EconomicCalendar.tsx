@@ -107,22 +107,17 @@ export default function EconomicCalendar({ data }: { data: EconomicEvent[] }) {
                 </div>
             </div>
 
-            {/* Grid Header - Static */}
-            <div className="flex-none grid grid-cols-12 gap-2 bg-slate-900/95 backdrop-blur border-b border-slate-800 py-3 px-4 text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-slate-500 items-center select-none shadow-sm">
-                {/* First 3 Cols: Uniform Widths */}
-                <div className="col-span-1 text-left pl-2">Time</div>
-                <div className="col-span-1 text-center hidden sm:block">Cur</div>
-                <div className="col-span-1 text-center">Imp</div>
-
-                {/* Event: 4 Cols (Reduced from 5) */}
-                <div className="col-span-4 pl-2">Event</div>
-
-                {/* Data: 5 Cols (Increased from 4) */}
-                <div className="col-span-5 grid grid-cols-3 text-right">
-                    <span className="hidden sm:block">Actual</span>
-                    <span className="hidden sm:block">Fcst</span>
-                    <span className="hidden sm:block">Prev</span>
-                    <span className="sm:hidden col-span-3 text-right">Data</span>
+            {/* Grid Header - Flex for better control */}
+            <div className="flex-none flex items-center gap-2 bg-slate-900/95 backdrop-blur border-b border-slate-800 py-3 px-4 text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-slate-500 select-none shadow-sm">
+                <div className="w-[40px] shrink-0 text-left pl-1">Time</div>
+                <div className="hidden sm:block w-[40px] shrink-0 text-center">Cur</div>
+                <div className="w-[10px] shrink-0 text-center">Imp</div>
+                <div className="flex-1 min-w-0 pl-2">Event</div>
+                <div className="w-auto shrink-0 flex gap-4 text-right">
+                    <span className="hidden sm:block w-[50px]">Actual</span>
+                    <span className="hidden sm:block w-[50px]">Fcst</span>
+                    <span className="hidden sm:block w-[50px]">Prev</span>
+                    <span className="sm:hidden">Data</span>
                 </div>
             </div>
 
@@ -140,38 +135,43 @@ export default function EconomicCalendar({ data }: { data: EconomicEvent[] }) {
                                 {/* Main Row (Clickable) */}
                                 <div
                                     onClick={() => toggleExpand(rowId)}
-                                    className="grid grid-cols-12 gap-2 py-3 px-4 items-center cursor-pointer select-none"
+                                    className="flex items-center gap-2 py-3 px-4 cursor-pointer select-none"
                                 >
-                                    {/* Time - Uniform Col 1 */}
-                                    <div className="col-span-1 text-xs font-mono text-slate-400 group-hover:text-slate-200 text-left pl-2">
+                                    {/* Time */}
+                                    <div className="w-[40px] shrink-0 text-xs font-mono text-slate-400 group-hover:text-slate-200 text-left pl-1">
                                         {item.time}
                                     </div>
 
-                                    {/* Currency - Uniform Col 2 */}
-                                    <div className="hidden sm:block col-span-1 text-center text-xs font-mono text-slate-500 font-bold">
+                                    {/* Currency */}
+                                    <div className="hidden sm:block w-[40px] shrink-0 text-center text-xs font-mono text-slate-500 font-bold">
                                         {item.currency || "USD"}
                                     </div>
 
-                                    {/* Impact - Uniform Col 3 */}
-                                    <div className="col-span-1 flex justify-center">
+                                    {/* Impact */}
+                                    <div className="w-[10px] shrink-0 flex justify-center">
                                         <ImpactBadge impact={item.impact} />
                                     </div>
 
-                                    {/* Event Name - 4 Cols */}
-                                    <div className="col-span-4 w-full pl-2">
+                                    {/* Event Name - Fluid width with wrap */}
+                                    <div className="flex-1 min-w-0 pl-2">
                                         <span className={cn(
-                                            "font-medium text-sm transition truncate block",
+                                            "font-medium text-sm transition block leading-tight", // Increased line height slightly
+                                            // on mobile: allow 2 lines. on desktop: truncate or 2 lines? 
+                                            // user complaint was "clamped", implying truncation.
+                                            "whitespace-normal line-clamp-2",
                                             isExpanded ? "text-white" : "text-slate-300 group-hover:text-white"
                                         )}>
                                             {item.event}
                                         </span>
                                     </div>
 
-                                    {/* Data Columns - 5 Cols (Wider) */}
-                                    <div className="col-span-5 grid grid-cols-3 text-right font-mono text-xs items-center">
-                                        <DataValue value={item.actual} forecast={item.forecast} isActual />
-                                        <span className="hidden sm:block text-slate-500">{item.forecast}</span>
-                                        <span className="hidden sm:block text-slate-500">{item.previous}</span>
+                                    {/* Data Columns */}
+                                    <div className="w-auto shrink-0 flex items-center justify-end gap-1 sm:gap-4 font-mono text-xs">
+                                        <div className="w-[50px] text-right">
+                                            <DataValue value={item.actual} forecast={item.forecast} isActual />
+                                        </div>
+                                        <span className="hidden sm:block w-[50px] text-right text-slate-500">{item.forecast}</span>
+                                        <span className="hidden sm:block w-[50px] text-right text-slate-500">{item.previous}</span>
                                     </div>
                                 </div>
 

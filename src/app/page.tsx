@@ -62,6 +62,14 @@ export default async function Home() {
           <SectorHeatmap />
           <TradersOnline />
         </div>
+
+        {/* Mobile-Only Footer */}
+        <div className="md:hidden border-t border-slate-800 pt-6 text-[10px] text-slate-500 font-mono space-y-2 text-center pb-8">
+          <p className="font-bold">© IndiaForex 2025</p>
+          <p>
+            Temporary build developed by <span className="text-slate-400">Shashank Anand</span> and operated by <span className="text-slate-400">Naman Arora</span>.
+          </p>
+        </div>
       </div>
     </DashboardLayout>
   );
