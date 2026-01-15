@@ -1,3 +1,4 @@
+import MarketTicker from "@/components/dashboard/MarketTicker";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { IndicesWatchlist } from "@/components/dashboard/IndicesWatchlist";
 import { NewsFeed } from "@/components/dashboard/NewsFeed";
@@ -41,6 +42,11 @@ export default async function Home() {
       }
     >
       <div className="flex flex-col gap-6">
+        {/* Mobile-Only Market Ticker */}
+        <div className="md:hidden -mx-4 -mt-2 mb-2">
+          <MarketTicker />
+        </div>
+
         <LiveMarketScanner />
         <EconomicCalendar data={events} />
         <ForumHighlights threads={threads} />
