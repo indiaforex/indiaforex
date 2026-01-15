@@ -110,16 +110,16 @@ export default function EconomicCalendar({ data }: { data: EconomicEvent[] }) {
             {/* Shared Scroll Container for Header & Body */}
             <div className="flex-1 min-h-0 overflow-x-auto no-scrollbar md:overflow-visible relative">
                 {/* Header - Stretches with content */}
+                {/* Header - Stretches with content */}
                 <div className="flex items-center gap-2 bg-slate-900/95 backdrop-blur border-b border-slate-800 py-3 px-4 min-w-[600px] md:min-w-0 text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-slate-500 select-none shadow-sm md:sticky md:top-0">
                     <div className="w-[40px] shrink-0 text-left pl-1">Time</div>
                     <div className="hidden sm:block w-[40px] shrink-0 text-center">Cur</div>
                     <div className="w-[10px] shrink-0 text-center">Imp</div>
                     <div className="flex-1 min-w-0 pl-2">Event</div>
                     <div className="w-auto shrink-0 flex gap-4 text-right">
-                        <span className="hidden sm:block w-[70px]">Actual</span>
-                        <span className="hidden sm:block w-[70px]">Fcst</span>
-                        <span className="hidden sm:block w-[70px]">Prev</span>
-                        <span className="sm:hidden">Data</span>
+                        <span className="w-[70px]">Actual</span>
+                        <span className="w-[70px]">Fcst</span>
+                        <span className="w-[70px]">Prev</span>
                     </div>
                 </div>
 
@@ -169,111 +169,113 @@ export default function EconomicCalendar({ data }: { data: EconomicEvent[] }) {
                                             <div className="w-[70px] text-right">
                                                 <DataValue value={item.actual} forecast={item.forecast} isActual />
                                             </div>
-                                            <span className="hidden sm:block w-[70px] text-right text-slate-500">{item.forecast}</span>
-                                            <span className="hidden sm:block w-[70px] text-right text-slate-500">{item.previous}</span>
+                                            <span className="w-[70px] text-right text-slate-500">{item.forecast}</span>
+                                            <span className="w-[70px] text-right text-slate-500">{item.previous}</span>
                                         </div>
                                     </div>
 
                                     {/* Detailed View Panel - Sticky on Mobile */}
-                                    <AnimatePresence>
-                                        {isExpanded && (
-                                            <motion.div
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: "auto", opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                transition={{ duration: 0.2, ease: "easeInOut" }}
-                                                className="overflow-hidden bg-slate-950/30 border-t border-slate-800/50 shadow-inner sticky left-0 md:static w-[calc(100vw-2rem)] md:w-auto"
-                                            >
-                                                <div className="p-4 grid grid-cols-1 lg:grid-cols-3 gap-6 text-sm">
-                                                    {/* Details Content... */}
-                                                    {/* Details Content (Same as before) */}
-                                                    <div className="space-y-4">
-                                                        <div className="bg-slate-800/40 rounded border border-slate-700/50 overflow-hidden">
-                                                            <div className="bg-slate-800/60 px-3 py-1.5 border-b border-slate-700/50 flex justify-between items-center">
-                                                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Specs</span>
-                                                                <span className="text-[10px] text-slate-500">Src: {item.source || "N/A"}</span>
-                                                            </div>
-                                                            <div className="p-3 space-y-3">
-                                                                <div>
-                                                                    <div className="text-xs text-slate-500 font-medium mb-1">Description</div>
-                                                                    <div className="text-slate-300 leading-relaxed text-xs">{item.description || "No description provided."}</div>
+                                    <div className="sticky left-0 md:static w-[calc(100vw-2rem)] md:w-auto overflow-hidden">
+                                        <AnimatePresence>
+                                            {isExpanded && (
+                                                <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: "auto", opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                                                    className="overflow-hidden bg-slate-950/30 border-t border-slate-800/50 shadow-inner"
+                                                >
+                                                    <div className="p-4 grid grid-cols-1 lg:grid-cols-3 gap-6 text-sm">
+                                                        {/* Details Content... */}
+                                                        {/* Details Content (Same as before) */}
+                                                        <div className="space-y-4">
+                                                            <div className="bg-slate-800/40 rounded border border-slate-700/50 overflow-hidden">
+                                                                <div className="bg-slate-800/60 px-3 py-1.5 border-b border-slate-700/50 flex justify-between items-center">
+                                                                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Specs</span>
+                                                                    <span className="text-[10px] text-slate-500">Src: {item.source || "N/A"}</span>
                                                                 </div>
-                                                                <div className="grid grid-cols-2 gap-4">
+                                                                <div className="p-3 space-y-3">
                                                                     <div>
-                                                                        <div className="text-[10px] text-slate-500 uppercase">Frequency</div>
-                                                                        <div className="text-slate-300 font-medium">{item.frequency || "-"}</div>
+                                                                        <div className="text-xs text-slate-500 font-medium mb-1">Description</div>
+                                                                        <div className="text-slate-300 leading-relaxed text-xs">{item.description || "No description provided."}</div>
                                                                     </div>
-                                                                    <div>
-                                                                        <div className="text-[10px] text-slate-500 uppercase">Next Release</div>
-                                                                        <div className="text-slate-300 font-medium">{item.nextRelease || "-"}</div>
+                                                                    <div className="grid grid-cols-2 gap-4">
+                                                                        <div>
+                                                                            <div className="text-[10px] text-slate-500 uppercase">Frequency</div>
+                                                                            <div className="text-slate-300 font-medium">{item.frequency || "-"}</div>
+                                                                        </div>
+                                                                        <div>
+                                                                            <div className="text-[10px] text-slate-500 uppercase">Next Release</div>
+                                                                            <div className="text-slate-300 font-medium">{item.nextRelease || "-"}</div>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
 
-                                                    <div className="bg-slate-800/40 rounded border border-slate-700/50 overflow-hidden h-fit">
-                                                        <div className="bg-slate-800/60 px-3 py-1.5 border-b border-slate-700/50">
-                                                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Recent History</span>
-                                                        </div>
-                                                        <table className="w-full text-xs">
-                                                            <thead className="bg-[#1e293b]/50 text-slate-500 border-b border-slate-700/50">
-                                                                <tr>
-                                                                    <th className="px-3 py-2 text-left font-medium">Date</th>
-                                                                    <th className="px-3 py-2 text-right font-medium">Act</th>
-                                                                    <th className="px-3 py-2 text-right font-medium">Fcst</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody className="divide-y divide-slate-700/30">
-                                                                {Array.isArray(history) && history.length > 0 ? (
-                                                                    history.map((h: any, idx: number) => (
-                                                                        <tr key={idx} className="hover:bg-slate-700/20">
-                                                                            <td className="px-3 py-2 text-sky-400 font-medium whitespace-nowrap">{h.date}</td>
-                                                                            <td className="px-3 py-2 text-right text-slate-300 font-mono">{h.actual}</td>
-                                                                            <td className="px-3 py-2 text-right text-slate-400 font-mono">{h.forecast}</td>
+                                                        <div className="bg-slate-800/40 rounded border border-slate-700/50 overflow-hidden h-fit">
+                                                            <div className="bg-slate-800/60 px-3 py-1.5 border-b border-slate-700/50">
+                                                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Recent History</span>
+                                                            </div>
+                                                            <table className="w-full text-xs">
+                                                                <thead className="bg-[#1e293b]/50 text-slate-500 border-b border-slate-700/50">
+                                                                    <tr>
+                                                                        <th className="px-3 py-2 text-left font-medium">Date</th>
+                                                                        <th className="px-3 py-2 text-right font-medium">Act</th>
+                                                                        <th className="px-3 py-2 text-right font-medium">Fcst</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody className="divide-y divide-slate-700/30">
+                                                                    {Array.isArray(history) && history.length > 0 ? (
+                                                                        history.map((h: any, idx: number) => (
+                                                                            <tr key={idx} className="hover:bg-slate-700/20">
+                                                                                <td className="px-3 py-2 text-sky-400 font-medium whitespace-nowrap">{h.date}</td>
+                                                                                <td className="px-3 py-2 text-right text-slate-300 font-mono">{h.actual}</td>
+                                                                                <td className="px-3 py-2 text-right text-slate-400 font-mono">{h.forecast}</td>
+                                                                            </tr>
+                                                                        ))
+                                                                    ) : (
+                                                                        <tr>
+                                                                            <td colSpan={3} className="p-4 text-center text-slate-500 italic">No history data</td>
                                                                         </tr>
+                                                                    )}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+
+                                                        <div className="bg-slate-800/40 rounded border border-slate-700/50 overflow-hidden h-fit">
+                                                            <div className="bg-slate-800/60 px-3 py-1.5 border-b border-slate-700/50">
+                                                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Related Stories</span>
+                                                            </div>
+                                                            <div className="divide-y divide-slate-700/30">
+                                                                {Array.isArray(stories) && stories.length > 0 ? (
+                                                                    stories.map((story: any, idx: number) => (
+                                                                        <a
+                                                                            key={idx}
+                                                                            href={story.link || "#"}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="block p-3 hover:bg-slate-700/20 group cursor-pointer transition"
+                                                                        >
+                                                                            <div className="flex gap-1.5 items-center mb-1">
+                                                                                <span className="text-[10px] text-amber-500 font-bold px-1 bg-amber-500/10 rounded">NEWS</span>
+                                                                                <span className="text-[10px] text-slate-500">{story.time}</span>
+                                                                            </div>
+                                                                            <h4 className="text-xs text-slate-300 font-medium leading-normal group-hover:text-emerald-400 transition-colors line-clamp-2">
+                                                                                {story.title}
+                                                                            </h4>
+                                                                        </a>
                                                                     ))
                                                                 ) : (
-                                                                    <tr>
-                                                                        <td colSpan={3} className="p-4 text-center text-slate-500 italic">No history data</td>
-                                                                    </tr>
+                                                                    <div className="p-4 text-center text-slate-500 italic">No related stories</div>
                                                                 )}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-
-                                                    <div className="bg-slate-800/40 rounded border border-slate-700/50 overflow-hidden h-fit">
-                                                        <div className="bg-slate-800/60 px-3 py-1.5 border-b border-slate-700/50">
-                                                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Related Stories</span>
-                                                        </div>
-                                                        <div className="divide-y divide-slate-700/30">
-                                                            {Array.isArray(stories) && stories.length > 0 ? (
-                                                                stories.map((story: any, idx: number) => (
-                                                                    <a
-                                                                        key={idx}
-                                                                        href={story.link || "#"}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="block p-3 hover:bg-slate-700/20 group cursor-pointer transition"
-                                                                    >
-                                                                        <div className="flex gap-1.5 items-center mb-1">
-                                                                            <span className="text-[10px] text-amber-500 font-bold px-1 bg-amber-500/10 rounded">NEWS</span>
-                                                                            <span className="text-[10px] text-slate-500">{story.time}</span>
-                                                                        </div>
-                                                                        <h4 className="text-xs text-slate-300 font-medium leading-normal group-hover:text-emerald-400 transition-colors line-clamp-2">
-                                                                            {story.title}
-                                                                        </h4>
-                                                                    </a>
-                                                                ))
-                                                            ) : (
-                                                                <div className="p-4 text-center text-slate-500 italic">No related stories</div>
-                                                            )}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
                                 </div>
                             );
                         })
