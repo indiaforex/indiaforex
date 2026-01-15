@@ -49,7 +49,19 @@ export default async function Home() {
 
         <LiveMarketScanner />
         <EconomicCalendar data={events} />
+
+        {/* Mobile-Only News Feed */}
+        <div className="md:hidden">
+          <NewsFeed />
+        </div>
+
         <ForumHighlights threads={threads} />
+
+        {/* Mobile-Only Sidebar Components */}
+        <div className="md:hidden space-y-6">
+          <SectorHeatmap />
+          <TradersOnline />
+        </div>
       </div>
     </DashboardLayout>
   );
