@@ -33,7 +33,7 @@ export default function MarketTicker() {
                     transition={{
                         repeat: Infinity,
                         ease: "linear",
-                        duration: 60,
+                        duration: 100,
                     }}
                 >
                     {items.map((idx, i) => (
