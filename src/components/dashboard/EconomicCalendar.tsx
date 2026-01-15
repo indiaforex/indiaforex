@@ -107,17 +107,19 @@ export default function EconomicCalendar({ data }: { data: EconomicEvent[] }) {
                 </div>
             </div>
 
-            {/* Grid Header - Flex for better control */}
-            <div className="flex-none flex items-center gap-2 bg-slate-900/95 backdrop-blur border-b border-slate-800 py-3 px-4 text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-slate-500 select-none shadow-sm">
-                <div className="w-[40px] shrink-0 text-left pl-1">Time</div>
-                <div className="hidden sm:block w-[40px] shrink-0 text-center">Cur</div>
-                <div className="w-[10px] shrink-0 text-center">Imp</div>
-                <div className="flex-1 min-w-0 pl-2">Event</div>
-                <div className="w-auto shrink-0 flex gap-4 text-right">
-                    <span className="hidden sm:block w-[50px]">Actual</span>
-                    <span className="hidden sm:block w-[50px]">Fcst</span>
-                    <span className="hidden sm:block w-[50px]">Prev</span>
-                    <span className="sm:hidden">Data</span>
+            {/* Grid Header - Scrollable on Mobile */}
+            <div className="flex-none bg-slate-900/95 backdrop-blur border-b border-slate-800 overflow-x-auto no-scrollbar md:overflow-visible">
+                <div className="flex items-center gap-2 py-3 px-4 min-w-[600px] md:min-w-0 text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-slate-500 select-none shadow-sm">
+                    <div className="w-[40px] shrink-0 text-left pl-1">Time</div>
+                    <div className="hidden sm:block w-[40px] shrink-0 text-center">Cur</div>
+                    <div className="w-[10px] shrink-0 text-center">Imp</div>
+                    <div className="flex-1 min-w-0 pl-2">Event</div>
+                    <div className="w-auto shrink-0 flex gap-4 text-right">
+                        <span className="hidden sm:block w-[70px]">Actual</span>
+                        <span className="hidden sm:block w-[70px]">Fcst</span>
+                        <span className="hidden sm:block w-[70px]">Prev</span>
+                        <span className="sm:hidden">Data</span>
+                    </div>
                 </div>
             </div>
 
@@ -132,46 +134,45 @@ export default function EconomicCalendar({ data }: { data: EconomicEvent[] }) {
 
                         return (
                             <div key={rowId} className="group transition-colors duration-200 hover:bg-slate-800/30">
-                                {/* Main Row (Clickable) */}
-                                <div
-                                    onClick={() => toggleExpand(rowId)}
-                                    className="flex items-center gap-2 py-3 px-4 cursor-pointer select-none"
-                                >
-                                    {/* Time */}
-                                    <div className="w-[40px] shrink-0 text-xs font-mono text-slate-400 group-hover:text-slate-200 text-left pl-1">
-                                        {item.time}
-                                    </div>
-
-                                    {/* Currency */}
-                                    <div className="hidden sm:block w-[40px] shrink-0 text-center text-xs font-mono text-slate-500 font-bold">
-                                        {item.currency || "USD"}
-                                    </div>
-
-                                    {/* Impact */}
-                                    <div className="w-[10px] shrink-0 flex justify-center">
-                                        <ImpactBadge impact={item.impact} />
-                                    </div>
-
-                                    {/* Event Name - Fluid width with wrap */}
-                                    <div className="flex-1 min-w-0 pl-2">
-                                        <span className={cn(
-                                            "font-medium text-sm transition block leading-tight", // Increased line height slightly
-                                            // on mobile: allow 2 lines. on desktop: truncate or 2 lines? 
-                                            // user complaint was "clamped", implying truncation.
-                                            "whitespace-normal line-clamp-2",
-                                            isExpanded ? "text-white" : "text-slate-300 group-hover:text-white"
-                                        )}>
-                                            {item.event}
-                                        </span>
-                                    </div>
-
-                                    {/* Data Columns */}
-                                    <div className="w-auto shrink-0 flex items-center justify-end gap-1 sm:gap-4 font-mono text-xs">
-                                        <div className="w-[50px] text-right">
-                                            <DataValue value={item.actual} forecast={item.forecast} isActual />
+                                {/* Main Row (Scrollable wrapper on mobile) */}
+                                <div className="w-full overflow-x-auto no-scrollbar md:overflow-visible">
+                                    <div
+                                        onClick={() => toggleExpand(rowId)}
+                                        className="flex items-center gap-2 py-3 px-4 cursor-pointer select-none min-w-[600px] md:min-w-0"
+                                    >
+                                        {/* Time */}
+                                        <div className="w-[40px] shrink-0 text-xs font-mono text-slate-400 group-hover:text-slate-200 text-left pl-1">
+                                            {item.time}
                                         </div>
-                                        <span className="hidden sm:block w-[50px] text-right text-slate-500">{item.forecast}</span>
-                                        <span className="hidden sm:block w-[50px] text-right text-slate-500">{item.previous}</span>
+
+                                        {/* Currency */}
+                                        <div className="hidden sm:block w-[40px] shrink-0 text-center text-xs font-mono text-slate-500 font-bold">
+                                            {item.currency || "USD"}
+                                        </div>
+
+                                        {/* Impact */}
+                                        <div className="w-[10px] shrink-0 flex justify-center">
+                                            <ImpactBadge impact={item.impact} />
+                                        </div>
+
+                                        {/* Event Name */}
+                                        <div className="flex-1 min-w-0 pl-2">
+                                            <span className={cn(
+                                                "font-medium text-sm transition block leading-tight whitespace-normal line-clamp-2",
+                                                isExpanded ? "text-white" : "text-slate-300 group-hover:text-white"
+                                            )}>
+                                                {item.event}
+                                            </span>
+                                        </div>
+
+                                        {/* Data Columns */}
+                                        <div className="w-auto shrink-0 flex items-center justify-end gap-1 sm:gap-4 font-mono text-xs whitespace-nowrap">
+                                            <div className="w-[70px] text-right">
+                                                <DataValue value={item.actual} forecast={item.forecast} isActual />
+                                            </div>
+                                            <span className="hidden sm:block w-[70px] text-right text-slate-500">{item.forecast}</span>
+                                            <span className="hidden sm:block w-[70px] text-right text-slate-500">{item.previous}</span>
+                                        </div>
                                     </div>
                                 </div>
 
