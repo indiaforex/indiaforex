@@ -3,6 +3,7 @@
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMarketData, MarketItem } from '@/hooks/useMarketData';
+import { motion } from 'framer-motion';
 
 export default function MarketTicker() {
     const { marketData } = useMarketData();
@@ -25,46 +26,62 @@ export default function MarketTicker() {
             <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#020617] to-transparent z-10"></div>
             <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#020617] to-transparent z-10"></div>
 
-            {/* Scrolling Container 1 */}
-            <div className="animate-marquee flex gap-12 whitespace-nowrap px-4 shrink-0 min-w-full items-center">
-                {items.map((idx, i) => (
-                    <div key={`${i}-1`} className="flex items-center gap-2 text-xs font-medium cursor-default">
-                        <span className="text-slate-400 font-semibold">{idx.name}</span>
-                        <span className="text-slate-100 font-mono tracking-tight">
-                            {idx.symbol === "Loading" ? "" : idx.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                        {idx.symbol !== "Loading" && (
-                            <span className={cn(
-                                "flex items-center gap-0.5 font-mono text-[10px]",
-                                idx.pChange >= 0 ? "text-emerald-400" : "text-rose-400"
-                            )}>
-                                {idx.pChange >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                                {Math.abs(idx.pChange).toFixed(2)}%
+            <div className="flex w-full overflow-hidden select-none gap-12 pl-4">
+                <motion.div
+                    className="flex items-center gap-12 whitespace-nowrap shrink-0"
+                    animate={{ x: "-100%" }}
+                    transition={{
+                        repeat: Infinity,
+                        ease: "linear",
+                        duration: 30,
+                    }}
+                >
+                    {items.map((idx, i) => (
+                        <div key={`${i}-1`} className="flex items-center gap-2 text-xs font-medium cursor-default">
+                            <span className="text-slate-400 font-semibold">{idx.name}</span>
+                            <span className="text-slate-100 font-mono tracking-tight">
+                                {idx.symbol === "Loading" ? "" : idx.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
-                        )}
-                    </div>
-                ))}
-            </div>
+                            {idx.symbol !== "Loading" && (
+                                <span className={cn(
+                                    "flex items-center gap-0.5 font-mono text-[10px]",
+                                    idx.pChange >= 0 ? "text-emerald-400" : "text-rose-400"
+                                )}>
+                                    {idx.pChange >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                                    {Math.abs(idx.pChange).toFixed(2)}%
+                                </span>
+                            )}
+                        </div>
+                    ))}
+                </motion.div>
 
-            {/* Scrolling Container 2 (Clone) */}
-            <div className="animate-marquee flex gap-12 whitespace-nowrap px-4 shrink-0 min-w-full items-center" aria-hidden="true">
-                {items.map((idx, i) => (
-                    <div key={`${i}-2`} className="flex items-center gap-2 text-xs font-medium cursor-default">
-                        <span className="text-slate-400 font-semibold">{idx.name}</span>
-                        <span className="text-slate-100 font-mono tracking-tight">
-                            {idx.symbol === "Loading" ? "" : idx.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                        {idx.symbol !== "Loading" && (
-                            <span className={cn(
-                                "flex items-center gap-0.5 font-mono text-[10px]",
-                                idx.pChange >= 0 ? "text-emerald-400" : "text-rose-400"
-                            )}>
-                                {idx.pChange >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                                {Math.abs(idx.pChange).toFixed(2)}%
+                <motion.div
+                    className="flex items-center gap-12 whitespace-nowrap shrink-0"
+                    animate={{ x: "-100%" }}
+                    transition={{
+                        repeat: Infinity,
+                        ease: "linear",
+                        duration: 30,
+                    }}
+                >
+                    {items.map((idx, i) => (
+                        <div key={`${i}-2`} className="flex items-center gap-2 text-xs font-medium cursor-default">
+                            <span className="text-slate-400 font-semibold">{idx.name}</span>
+                            <span className="text-slate-100 font-mono tracking-tight">
+                                {idx.symbol === "Loading" ? "" : idx.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
-                        )}
-                    </div>
-                ))}
+                            {idx.symbol !== "Loading" && (
+                                <span className={cn(
+                                    "flex items-center gap-0.5 font-mono text-[10px]",
+                                    idx.pChange >= 0 ? "text-emerald-400" : "text-rose-400"
+                                )}>
+                                    {idx.pChange >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                                    {Math.abs(idx.pChange).toFixed(2)}%
+                                </span>
+                            )}
+                        </div>
+                    ))}
+                </motion.div>
             </div>
         </div>
     );
