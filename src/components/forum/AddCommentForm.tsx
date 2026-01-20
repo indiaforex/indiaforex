@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthProvider";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { Send, Lock, X, CornerDownRight } from "lucide-react";
 import { UserRole, UserProfile } from "@/types/forum";
 import { toast } from "sonner";
@@ -22,14 +22,18 @@ export function AddCommentForm({ threadId, parentId, replyingTo, onCancelReply, 
     const { user, profile, isLoading } = useAuth();
     const [content, setContent] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const [isExpanded, setIsExpanded] = useState(false);
+    // Remove textareaRef as we might not need it for RichTextEditor same way, or use internal ref if supported?
+    // RichTextEditor doesn't expose ref to focus easily in this wrapper. 
+    // We'll rely on autoFocus or just state.
 
-    // Focus textarea when replyingTo changes
+    // Focus logic for reply:
     useEffect(() => {
-        if (replyingTo && textareaRef.current) {
-            textareaRef.current.focus();
+        if (replyingTo) {
+            setIsExpanded(true);
         }
     }, [replyingTo]);
+
 
     // --- ACCESS CONTROL LOGIC ---
     const canComment = (role?: UserRole): boolean => {
@@ -39,8 +43,8 @@ export function AddCommentForm({ threadId, parentId, replyingTo, onCancelReply, 
 
     const hasPermission = user && profile && canComment(profile.role);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
         if (!content.trim()) return;
 
         setIsSubmitting(true);
@@ -48,6 +52,7 @@ export function AddCommentForm({ threadId, parentId, replyingTo, onCancelReply, 
         try {
             await createComment(threadId, content, parentId);
             setContent("");
+            setIsExpanded(false);
             toast.success("Comment posted");
 
             // Reset reply mode if active
@@ -59,6 +64,16 @@ export function AddCommentForm({ threadId, parentId, replyingTo, onCancelReply, 
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleFocus = () => {
+        setIsExpanded(true);
+    };
+
+    const handleCancel = () => {
+        setIsExpanded(false);
+        setContent("");
+        if (onCancelReply) onCancelReply();
     };
 
     if (isLoading) return null;
@@ -78,8 +93,8 @@ export function AddCommentForm({ threadId, parentId, replyingTo, onCancelReply, 
                     <span className="text-xs font-mono">Posting restricted for role: {profile?.role}</span>
                 </div>
             ) : (
-                <form onSubmit={handleSubmit} className="flex flex-col gap-0 relative shadow-2xl">
-                    {/* Reply Context Indicator (Absolute top, sliding up) */}
+                <div className="flex flex-col gap-2 relative shadow-2xl">
+                    {/* Reply Context Indicator */}
                     {replyingTo && (
                         <div className="absolute bottom-full left-0 right-0 mb-2 flex items-center justify-between bg-slate-900 border border-slate-700 rounded-md px-3 py-2 animate-in slide-in-from-bottom-2 fade-in shadow-lg">
                             <div className="flex items-center gap-2 text-xs text-emerald-400 font-mono">
@@ -96,32 +111,40 @@ export function AddCommentForm({ threadId, parentId, replyingTo, onCancelReply, 
                         </div>
                     )}
 
-                    <div className={cn("flex gap-2 items-end bg-slate-900 border border-slate-700 rounded-lg p-2 focus-within:ring-1 focus-within:ring-emerald-500/50 transition-all shadow-inner", replyingTo && "rounded-b-lg")}>
-                        <Textarea
-                            ref={textareaRef}
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                            placeholder={replyingTo ? `Reply to ${replyingTo.username}...` : "Add to the discussion..."}
-                            className="min-h-[40px] max-h-[120px] bg-transparent border-0 focus-visible:ring-0 resize-none py-2 px-1 text-sm font-mono leading-relaxed w-full placeholder:text-slate-600"
-                            autoFocus={autoFocus}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSubmit(e);
-                                }
-                            }}
-                        />
-                        <Button
-                            type="submit"
-                            size="sm"
-                            disabled={isSubmitting || !content.trim()}
-                            className="h-9 w-9 p-0 shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md mb-0.5"
+                    {!isExpanded && !replyingTo ? (
+                        <div
+                            onClick={handleFocus}
+                            className="w-full h-10 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-500 cursor-text hover:border-emerald-500/50 transition-colors font-mono"
                         >
-                            {isSubmitting ? <span className="animate-spin text-[10px]">...</span> : <Send className="h-4 w-4" />}
-                        </Button>
-                    </div>
-                </form>
+                            Add to the discussion...
+                        </div>
+                    ) : (
+                        <div className="animate-in fade-in zoom-in-95 duration-200 space-y-2">
+                            <RichTextEditor
+                                value={content}
+                                onChange={(val) => setContent(val || "")}
+                                placeholder={replyingTo ? `Reply to ${replyingTo.username}...` : "Add to the discussion..."}
+                                height={150}
+                                preview="edit"
+                                className="bg-slate-900 border-slate-700"
+                            />
+                            <div className="flex justify-end gap-2">
+                                <Button size="sm" variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={() => handleSubmit()}
+                                    size="sm"
+                                    disabled={isSubmitting || !content.trim()}
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white"
+                                >
+                                    {isSubmitting ? <span className="animate-spin text-[10px]">...</span> : <><Send className="mr-2 h-4 w-4" /> Post Comment</>}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </div>
             )}
-        </div>
+        </div >
     );
 }

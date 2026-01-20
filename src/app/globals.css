@@ -128,12 +128,21 @@
 }
 
 /* Override Browser Selection Color */
+/* Override Browser Selection Color */
 ::selection {
-  background: transparent;
+  background: rgba(16, 185, 129, 0.3);
+  /* Emerald 500 with opacity */
+  color: inherit;
 }
 
 ::-moz-selection {
-  background: transparent;
+  background: rgba(16, 185, 129, 0.3);
+  color: inherit;
+}
+
+b,
+strong {
+  font-weight: bold;
 }
 
 @layer utilities {

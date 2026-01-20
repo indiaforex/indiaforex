@@ -7,17 +7,15 @@ export async function middleware(request: NextRequest) {
     // 1. Update Supabase session (handles token refresh)
     const response = await updateSession(request);
 
-    // 2. Existing NextAuth Admin Check
-    if (request.nextUrl.pathname.startsWith('/admin')) {
-        const token = await getToken({
-            req: request,
-            secret: process.env.NEXTAUTH_SECRET,
-        });
-
-        if (!token) {
-            return NextResponse.redirect(new URL('/login', request.url));
-        }
+    // 2. Supabase Admin Check (Optional - Page level check is also present)
+    /* 
+    const supabase = createClient(request, response);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (request.nextUrl.pathname.startsWith('/admin') && !user) {
+         return NextResponse.redirect(new URL('/login', request.url));
     }
+    */
+    // For now relying on page-level protection to avoid double-instantiation cost in middleware unless critical.
 
     // Return the response prepared by updateSession (which preserves cookies)
     return response;

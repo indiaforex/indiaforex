@@ -34,7 +34,7 @@ export default function DashboardLayout({
                 </main>
 
                 {/* Right Sidebar (News) - Sticky */}
-                <aside className="hidden lg:flex flex-col w-[25%] sticky top-[80px] h-[calc(100vh-100px)] pl-2 flex-none z-40">
+                <aside className="hidden lg:flex flex-col w-[25%] sticky top-[80px] h-[calc(100vh-120px)] pl-2 flex-none z-40 overflow-hidden">
                     {rightSidebar}
                 </aside>
             </div>

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { MessageSquare, ThumbsUp, Calendar, Settings, Activity, Clock } from "lucide-react";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import { getUserThreads, getUserComments } from "@/lib/forum";
+import { getUserThreads, getUserComments, getUserStats } from "@/lib/forum";
 import Link from "next/link";
 
 type Props = {
@@ -33,13 +33,9 @@ export default async function ProfilePage({ params }: Props) {
     const isOwner = user?.id === profile.id;
 
     // 3. Fetch Stats & Activity
+    const stats = await getUserStats(profile.id);
     const threads = await getUserThreads(profile.id);
     const comments = await getUserComments(profile.id);
-
-    const threadCount = threads.length; // Approximate from recent call or do separate count if needed precise global
-    // Actually, for stats we might want total counts. Let's do quick separate counts for accuracy.
-    const { count: totalThreads } = await supabase.from("forum_threads").select("*", { count: 'exact', head: true }).eq("author_id", profile.id);
-    const { count: totalComments } = await supabase.from("forum_comments").select("*", { count: 'exact', head: true }).eq("author_id", profile.id);
 
 
     return (
@@ -85,15 +81,15 @@ export default async function ProfilePage({ params }: Props) {
                             {/* Stats Grid */}
                             <div className="grid grid-cols-3 gap-4 border-t border-slate-800/50 pt-4 w-full md:w-fit">
                                 <div className="text-center md:text-left pr-6 border-r border-slate-800/50 last:border-0">
-                                    <div className="text-2xl font-bold text-white">{profile.reputation_points || 0}</div>
+                                    <div className="text-2xl font-bold text-white">{stats.reputation || 0}</div>
                                     <div className="text-[10px] text-slate-500 uppercase tracking-wider">Reputation</div>
                                 </div>
                                 <div className="text-center md:text-left px-6 border-r border-slate-800/50 last:border-0">
-                                    <div className="text-2xl font-bold text-white">{totalThreads || 0}</div>
+                                    <div className="text-2xl font-bold text-white">{stats.threadCount || 0}</div>
                                     <div className="text-[10px] text-slate-500 uppercase tracking-wider">Threads</div>
                                 </div>
                                 <div className="text-center md:text-left pl-6">
-                                    <div className="text-2xl font-bold text-white">{totalComments || 0}</div>
+                                    <div className="text-2xl font-bold text-white">{stats.commentCount || 0}</div>
                                     <div className="text-[10px] text-slate-500 uppercase tracking-wider">Comments</div>
                                 </div>
                             </div>

@@ -1,7 +1,7 @@
 import { ForumThread } from "@/types/forum";
 import { ThreadCard } from "./ThreadCard";
 import { CreateThreadModal } from "./CreateThreadModal";
-import { ArrowRight, ThumbsUp, MessageSquare } from "lucide-react";
+import { ArrowRight, ThumbsUp, MessageSquare, Pin } from "lucide-react";
 import Link from "next/link";
 
 interface ForumHighlightsProps {
@@ -34,8 +34,9 @@ export function ForumHighlights({ threads }: ForumHighlightsProps) {
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 flex-1">
-                                    <h3 className="font-semibold text-sm text-slate-200 truncate group-hover:text-emerald-400 transition-colors">
-                                        {thread.title}
+                                    <h3 className="font-semibold text-sm text-slate-200 group-hover:text-emerald-400 transition-colors flex items-center gap-2">
+                                        {thread.is_pinned && <Pin className="h-3 w-3 text-amber-500 shrink-0 fill-amber-500/20" />}
+                                        <span className="truncate">{thread.title}</span>
                                     </h3>
                                     <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-500 font-mono">
                                         <span className="text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 uppercase tracking-wider">

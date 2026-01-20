@@ -4,20 +4,28 @@ import { useAuth } from "@/context/AuthProvider";
 import { AuthDialog } from "@/components/auth/AuthDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { useState } from "react";
 import { Loader2, Send } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export function PostComment({ threadId }: { threadId: string }) {
     const { user, profile } = useAuth();
+    const router = useRouter();
     const [content, setContent] = useState("");
     const [showAuth, setShowAuth] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
+    const [isExpanded, setIsExpanded] = useState(false);
+
     const handleFocus = () => {
         if (!user) {
             setShowAuth(true);
+            return;
         }
+        setIsExpanded(true);
     };
 
     const handleSubmit = async () => {
@@ -28,15 +36,24 @@ export function PostComment({ threadId }: { threadId: string }) {
         if (!content.trim()) return;
 
         setSubmitting(true);
-        // Simulate API call for MVP
-        // In real app, call Supabase insert here and revalidate path
-        await new Promise(r => setTimeout(r, 1000));
+        const supabase = createClient();
 
-        console.log("Posting comment to", threadId, ":", content);
+        const { error } = await supabase.from('forum_comments').insert({
+            thread_id: threadId,
+            author_id: user.id,
+            content: content
+        });
 
-        setContent("");
         setSubmitting(false);
-        // Toast success here
+
+        if (error) {
+            toast.error("Failed to post comment");
+        } else {
+            setContent("");
+            setIsExpanded(false);
+            toast.success("Comment posted!");
+            router.refresh();
+        }
     };
 
     const initials = profile?.username?.substring(0, 2).toUpperCase() || "U";
@@ -48,27 +65,46 @@ export function PostComment({ threadId }: { threadId: string }) {
                 <AvatarFallback>{user ? initials : "?"}</AvatarFallback>
             </Avatar>
             <div className="flex-1 space-y-2">
-                <Textarea
-                    placeholder={user ? "What are your thoughts?" : "Log in to share your thoughts..."}
-                    className="min-h-[80px] bg-background/50 resize-y"
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    onFocus={handleFocus}
-                />
-                <div className="flex justify-end">
-                    <Button
-                        size="sm"
-                        onClick={handleSubmit}
-                        disabled={submitting || !content.trim()}
+                {!isExpanded ? (
+                    <div
+                        onClick={handleFocus}
+                        className="w-full h-10 rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-500 cursor-text hover:border-slate-700 transition-colors"
                     >
-                        {submitting ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <Send className="mr-2 h-4 w-4" />
-                        )}
-                        Post Comment
-                    </Button>
-                </div>
+                        {user ? "What are your thoughts?" : "Log in to share your thoughts..."}
+                    </div>
+                ) : (
+                    <div className="animate-in fade-in zoom-in-95 duration-200">
+                        <RichTextEditor
+                            placeholder="What are your thoughts?"
+                            value={content}
+                            onChange={(val) => setContent(val || "")}
+                            height={150}
+                            preview="edit"
+                        />
+                        <div className="flex justify-end gap-2 mt-2">
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setIsExpanded(false)}
+                                disabled={submitting}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                size="sm"
+                                onClick={handleSubmit}
+                                disabled={submitting || !content.trim()}
+                            >
+                                {submitting ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Send className="mr-2 h-4 w-4" />
+                                )}
+                                Post Comment
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
             <AuthDialog open={showAuth} onOpenChange={setShowAuth} />
         </div>

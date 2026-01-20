@@ -11,17 +11,57 @@ export async function createComment(threadId: string, content: string, parentId?
         throw new Error("Unauthorized");
     }
 
-    const { error } = await supabase
+    // 1. Insert Comment
+    const { data: newComment, error } = await supabase
         .from('forum_comments')
         .insert({
             thread_id: threadId,
             content,
             author_id: user.id,
             parent_id: parentId || null
-        });
+        })
+        .select()
+        .single();
 
     if (error) {
         throw new Error(error.message);
+    }
+
+    // 2. Handle Mentions Logic
+    try {
+        // Extract unique usernames: @username (alphanumeric + underscore)
+        const mentionRegex = /@(\w+)/g;
+        const matches = [...content.matchAll(mentionRegex)];
+        const usernames = [...new Set(matches.map(m => m[1]))]; // Unique usernames
+
+        if (usernames.length > 0) {
+            // Resolve usernames to IDs
+            const { data: mentionedUsers } = await supabase
+                .from('profiles')
+                .select('id, username')
+                .in('username', usernames);
+
+            if (mentionedUsers && mentionedUsers.length > 0) {
+                const notifications = mentionedUsers
+                    .filter(u => u.id !== user.id) // Don't notify self
+                    .map(u => ({
+                        user_id: u.id,              // Recipient
+                        actor_id: user.id,          // Actor (Commenter)
+                        type: 'mention',
+                        resource_id: newComment.id,
+                        resource_slug: threadId,
+                        content_preview: content.substring(0, 50),
+                        is_read: false
+                    }));
+
+                if (notifications.length > 0) {
+                    await supabase.from('notifications').insert(notifications);
+                }
+            }
+        }
+    } catch (err) {
+        // Don't fail the comment if notifications fail
+        console.error("Error processing mentions:", err);
     }
 
     revalidatePath(`/forum/${threadId}`);
@@ -60,6 +100,28 @@ export async function deleteComment(commentId: string, threadId: string) {
     return { success: true };
 }
 
+
+export async function updateComment(commentId: string, content: string, threadId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        throw new Error("Unauthorized");
+    }
+
+    const { error } = await supabase
+        .from('forum_comments')
+        .update({ content })
+        .eq('id', commentId)
+        .eq('author_id', user.id);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    revalidatePath(`/forum/${threadId}`);
+    return { success: true };
+}
 
 export async function toggleLikeComment(commentId: string, threadId: string) {
     const supabase = await createClient();

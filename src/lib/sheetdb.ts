@@ -38,11 +38,25 @@ export async function getEvents(): Promise<EconomicEvent[]> {
 export async function addEvent(event: Omit<EconomicEvent, 'id'>) {
     if (!SHEET_URL) throw new Error("SheetDB URL missing");
 
-    const newEvent = { ...event, id: Date.now().toString() };
+    const newEvent = {
+        ...event,
+        id: Date.now().toString(),
+        // SheetDB/Google Sheets needs arrays to be stringified to fit in a single cell
+        history: event.history ? JSON.stringify(event.history) : '[]',
+        stories: event.stories ? JSON.stringify(event.stories) : '[]'
+    };
 
-    await fetch(`${SHEET_URL}?sheet=Calendar`, {
+    const res = await fetch(SHEET_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ data: newEvent }),
     });
+
+    if (!res.ok) {
+        const text = await res.text();
+        console.error("SheetDB Write Failed:", res.status, text);
+        throw new Error(`SheetDB Error: ${text}`);
+    }
 }

@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthProvider";
 import { AuthDialog } from "@/components/auth/AuthDialog";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { UserBadgeList } from "./UserBadge";
 
 interface ThreadCardProps {
     thread: ForumThread;
@@ -45,6 +46,7 @@ export function ThreadCard({ thread }: ThreadCardProps) {
                             <span>•</span>
                             <span className="flex items-center gap-1">
                                 {thread.author?.username || "Unknown"}
+                                <UserBadgeList badges={thread.author?.badges} className="flex gap-0.5 ml-1" />
                             </span>
                             <span>•</span>
                             <span className="flex items-center gap-1">

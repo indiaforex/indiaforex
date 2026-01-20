@@ -1,34 +1,36 @@
 'use client';
 
-import { useState } from 'react';
-import { addEvent } from '@/lib/sheetdb';
+import { useAuth } from "@/context/AuthProvider";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 
-export default function Admin() {
-    const [form, setForm] = useState({
-        time: '',
-        event: '',
-        impact: 'Medium',
-        forecast: '',
-        previous: '',
-    });
+export default function AdminRootPage() {
+    const { profile, isLoading } = useAuth();
+    const router = useRouter();
 
-    const submit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        await addEvent({ ...form, actual: '---', impact: form.impact as any });
-        alert('Event added');
-    };
+    useEffect(() => {
+        if (isLoading) return;
+
+        if (!profile) {
+            router.replace('/forum'); // Or login
+            return;
+        }
+
+        const role = profile.role;
+
+        if (role === 'admin' || role === 'super_admin') {
+            router.replace('/admin/moderation');
+        } else if (role === 'event_analyst') {
+            router.replace('/admin/events');
+        } else {
+            router.replace('/forum'); // Unauthorized
+        }
+    }, [isLoading, profile, router]);
 
     return (
-        <div className="p-8 max-w-xl mx-auto">
-            <h1 className="text-2xl font-bold mb-6">Add Event</h1>
-
-            <form onSubmit={submit} className="space-y-4">
-                <input required placeholder="Time" className="w-full p-3 border" />
-                <input required placeholder="Event" className="w-full p-3 border" />
-                <button className="bg-blue-600 text-white p-3 rounded w-full">
-                    Submit
-                </button>
-            </form>
+        <div className="min-h-screen flex items-center justify-center bg-slate-950">
+            <Loader2 className="animate-spin h-8 w-8 text-slate-400" />
         </div>
     );
 }
