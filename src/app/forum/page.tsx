@@ -1,4 +1,5 @@
 import { getThreads, getBookmarkedThreads, getRecentThreads } from "@/lib/forum";
+import { getMarketData } from "@/lib/market";
 import { ForumHighlights } from "@/components/forum/ForumHighlights";
 import { CreateThreadModal } from "@/components/forum/CreateThreadModal";
 import { ForumSidebar } from "@/components/forum/ForumSidebar";
@@ -22,6 +23,9 @@ export default async function ForumIndexPage({ searchParams }: Props) {
 
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+
+    // Fetch Market Data (Server-Side Cache)
+    const marketData = await getMarketData();
 
     let threads: any[] = [];
     let total = 0;
@@ -51,7 +55,7 @@ export default async function ForumIndexPage({ searchParams }: Props) {
 
                 {/* Mobile-Only Market Ticker */}
                 <div className="md:hidden -mx-4 -mt-2 mb-2">
-                    <MarketTicker />
+                    <MarketTicker initialData={marketData} />
                 </div>
 
                 {/* Header / Mobile Action */}

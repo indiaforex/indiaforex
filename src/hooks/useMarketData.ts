@@ -12,11 +12,12 @@ export interface MarketItem {
     isOpen: boolean;
 }
 
-export function useMarketData() {
+export function useMarketData(initialData?: MarketItem[]) {
     const { data, error, isLoading, mutate } = useSWR<{ data: MarketItem[] }>('/api/market', fetcher, {
-        refreshInterval: 5000, // Poll every 5 seconds for "Live" feel
+        refreshInterval: 15000, // Poll every 15 seconds (synced with cache)
         revalidateOnFocus: false,
-        keepPreviousData: true // Prevents flashing loading state between updates
+        keepPreviousData: true, // Prevents flashing loading state between updates
+        fallbackData: initialData ? { data: initialData } : undefined
     });
 
     return {

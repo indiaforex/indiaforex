@@ -2,26 +2,34 @@
 
 import { ForumComment, UserProfile } from "@/types/forum";
 import { CommentItem } from "./CommentItem";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Loader2 } from "lucide-react";
 import { AddCommentForm } from "./AddCommentForm";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { buildCommentTree, CommentNode } from "@/lib/commentTree";
+import { fetchMoreComments } from "@/app/actions";
+import { Button } from "@/components/ui/button";
 
 interface CommentSectionProps {
     threadId: string;
     comments: ForumComment[];
     children?: React.ReactNode;
     lastViewedAt?: string | null;
+    totalComments: number;
 }
 
-export function CommentSection({ threadId, comments: initialComments, children, lastViewedAt }: CommentSectionProps) {
-    const { user } = useAuth();
+export function CommentSection({ threadId, comments: initialComments, children, lastViewedAt, totalComments }: CommentSectionProps) {
+    const { user, profile } = useAuth();
     const [comments, setComments] = useState(initialComments);
+    const [page, setPage] = useState(1);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+    // Derived state for Load More
+    const hasMore = comments.length < totalComments;
+
     const scrollRef = useRef<HTMLDivElement>(null);
-    const rootComments = comments.filter(c => !c.parent_id);
-    const getReplies = (parentId: string) => comments.filter(c => c.parent_id === parentId);
 
     // State for Reply Mode
     const [replyingToId, setReplyingToId] = useState<string | null>(null);
@@ -29,6 +37,8 @@ export function CommentSection({ threadId, comments: initialComments, children, 
 
     // State for Read Comments (Local Session)
     const [readCommentIds, setReadCommentIds] = useState<Set<string>>(new Set());
+
+    const commentTree = useMemo(() => buildCommentTree(comments), [comments]);
 
     // Keep user in ref to avoid stale closure in subscription
     const userRef = useRef(user);
@@ -51,13 +61,45 @@ export function CommentSection({ threadId, comments: initialComments, children, 
         }
     };
 
-    // Auto-scroll to bottom on mount
+    const handleLoadMore = async () => {
+        setIsLoadingMore(true);
+        try {
+            const nextPage = page + 1;
+            const res = await fetchMoreComments(threadId, nextPage);
+            setComments(prev => {
+                // Deduplicate just in case
+                const newComments = res.comments.filter(nc => !prev.some(pc => pc.id === nc.id));
+                return [...prev, ...newComments];
+            });
+            setPage(nextPage);
+        } catch (error) {
+            toast.error("Failed to load more comments");
+        } finally {
+            setIsLoadingMore(false);
+        }
+    };
+
+    // Auto-scroll to bottom on mount (Only if page 1?)
+    useEffect(() => {
+        if (scrollRef.current && page === 1) {
+            // Only auto-scroll on initial load if needed, but 'scrollTop = scrollHeight' might be annoying if user is reading.
+            // Maybe only if no lastViewedAt?
+            // Existing behavior was: scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            // We'll keep it for now but it might fight with Load More if trigger happens.
+            // Actually, usually you want to see the thread content first.
+            // For now, I will NOT force scroll on every render, strictly on mount.
+        }
+    }, [page]);
+
+    // Re-instating the mount scroll behavior from original code
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
+    }, []);
 
-        // Realtime Subscription
+    // Realtime Subscription
+    useEffect(() => {
         const supabase = createClient();
         const channel = supabase
             .channel(`comments-${threadId}`)
@@ -75,7 +117,7 @@ export function CommentSection({ threadId, comments: initialComments, children, 
                 // Fetch author details for the new comment to display correctly
                 const { data: author } = await supabase
                     .from('profiles')
-                    .select('id, username, avatar_url, role, reputation_points, created_at')
+                    .select('id, username, avatar_url, role, reputation_points, created_at, is_banned')
                     .eq('id', newComment.author_id)
                     .single();
 
@@ -113,7 +155,6 @@ export function CommentSection({ threadId, comments: initialComments, children, 
         const element = document.getElementById(`comment-${firstNewCommentId}`);
         if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Optionally flash it
         }
     };
 
@@ -127,6 +168,45 @@ export function CommentSection({ threadId, comments: initialComments, children, 
         setReplyingUserProfile(undefined);
     };
 
+    const handleOptimisticAdd = (content: string, parentId?: string | null) => {
+        if (!user) return;
+
+        const tempComment: ForumComment = {
+            id: `temp-${Date.now()}`,
+            thread_id: threadId,
+            author_id: user.id,
+            content: content,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            deleted_at: null,
+            deleted_by: null,
+            deletion_reason: null,
+            parent_id: parentId || null,
+            likes_count: 0,
+            // reply_count: 0, // Not in type apparently
+            // author object for display
+            author: {
+                id: user.id,
+                username: profile?.username || user.email?.split('@')[0] || 'User',
+                avatar_url: user.user_metadata?.avatar_url,
+                role: profile?.role || 'user',
+                reputation_points: profile?.reputation_points || 0,
+                created_at: profile?.created_at || new Date().toISOString(),
+                is_banned: false
+            }
+        };
+
+        setComments(prev => [...prev, tempComment]);
+
+        if (!parentId) {
+            setTimeout(() => {
+                if (scrollRef.current) {
+                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                }
+            }, 100);
+        }
+    };
+
     return (
         <div className="flex flex-col relative w-full">
             {/* Content Area: Thread Post + Comments */}
@@ -134,61 +214,58 @@ export function CommentSection({ threadId, comments: initialComments, children, 
                 {/* Thread Content (passed as children) */}
                 {children}
 
-                <div className="mt-8 mb-4 flex items-center gap-2 border-b border-slate-800 pb-2">
-                    <MessageSquare className="h-4 w-4 text-emerald-500" />
-                    <h3 className="text-sm font-bold font-mono text-emerald-500">COMMENTS ({comments.length})</h3>
+                <div className="mt-8 mb-4 flex items-center gap-2 border-b border-slate-800 pb-2 justify-between">
+                    <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4 text-emerald-500" />
+                        <h3 className="text-sm font-bold font-mono text-emerald-500">COMMENTS ({totalComments + (comments.length - initialComments.length)})</h3>
+                    </div>
                 </div>
 
                 {/* List of Comments */}
                 <div className="flex flex-col gap-4 pb-4">
-                    {rootComments.length === 0 ? (
+                    {comments.length === 0 ? (
                         <p className="py-8 text-center text-slate-600 text-xs font-mono">// No comments yet. Be the first to share your thoughts!</p>
                     ) : (
-                        rootComments.map(comment => (
-                            <div key={comment.id} id={`comment-${comment.id}`} className="group">
-                                <CommentItem
-                                    comment={comment}
-                                    threadId={threadId}
-                                    onReply={() => handleReply(comment.id, comment.author)}
-                                    isNew={(lastViewedAt ? new Date(comment.created_at) > new Date(lastViewedAt) : false) && !readCommentIds.has(comment.id)}
-                                    onRead={() => handleMarkAsRead(comment.id)}
-                                    replyCount={getReplies(comment.id).length}
-                                >
-                                    {getReplies(comment.id).length > 0 && (
-                                        <div className="flex flex-col mt-2 border-l border-slate-800/50 pl-4">
-                                            {getReplies(comment.id).map(reply => (
-                                                <div key={reply.id} id={`comment-${reply.id}`}>
-                                                    <CommentItem
-                                                        comment={reply}
-                                                        isReply
-                                                        threadId={threadId}
-                                                        onReply={() => handleReply(reply.id, reply.author)}
-                                                        isNew={(lastViewedAt ? new Date(reply.created_at) > new Date(lastViewedAt) : false) && !readCommentIds.has(reply.id)}
-                                                        onRead={() => handleMarkAsRead(reply.id)}
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </CommentItem>
-                            </div>
-                        ))
+                        <RecursiveCommentList
+                            nodes={commentTree}
+                            threadId={threadId}
+                            handleReply={handleReply}
+                            handleMarkAsRead={handleMarkAsRead}
+                            lastViewedAt={lastViewedAt}
+                            readCommentIds={readCommentIds}
+                        />
                     )}
                 </div>
-            </div>
 
-            {/* Jump to New Button */}
-            {firstNewCommentId && (
-                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20">
-                    <button
-                        onClick={scrollToFirstNew}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-1.5 px-3 rounded-full shadow-lg shadow-emerald-900/50 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4 transition-all"
-                    >
-                        <span>Jump to New</span>
-                        <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-                    </button>
-                </div>
-            )}
+                {/* Load More Button */}
+                {hasMore && (
+                    <div className="flex justify-center py-4">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleLoadMore}
+                            disabled={isLoadingMore}
+                            className="text-xs font-mono border-slate-800 text-slate-400 hover:text-white"
+                        >
+                            {isLoadingMore ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                            Load More Comments
+                        </Button>
+                    </div>
+                )}
+            </div>
+            {
+                firstNewCommentId && (
+                    <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20">
+                        <button
+                            onClick={scrollToFirstNew}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-1.5 px-3 rounded-full shadow-lg shadow-emerald-900/50 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4 transition-all"
+                        >
+                            <span>Jump to New</span>
+                            <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                        </button>
+                    </div>
+                )
+            }
 
             {/* Sticky Bottom Input Area */}
             <div className="shrink-0 bg-slate-950 border-t border-slate-800 p-2 sticky bottom-0 z-30 w-full">
@@ -197,8 +274,57 @@ export function CommentSection({ threadId, comments: initialComments, children, 
                     parentId={replyingToId}
                     replyingTo={replyingUserProfile}
                     onCancelReply={handleCancelReply}
+                    onOptimisticAdd={handleOptimisticAdd}
                 />
             </div>
-        </div>
+        </div >
+    );
+}
+
+function RecursiveCommentList({
+    nodes,
+    threadId,
+    handleReply,
+    handleMarkAsRead,
+    lastViewedAt,
+    readCommentIds
+}: {
+    nodes: CommentNode[],
+    threadId: string,
+    handleReply: (id: string, author?: UserProfile) => void,
+    handleMarkAsRead: (id: string) => void,
+    lastViewedAt?: string | null,
+    readCommentIds: Set<string>
+}) {
+    return (
+        <>
+            {nodes.map(node => (
+                <div key={node.id} id={`comment-${node.id}`} className="group">
+                    <CommentItem
+                        comment={node}
+                        threadId={threadId}
+                        onReply={() => handleReply(node.id, node.author)}
+                        isNew={(lastViewedAt ? new Date(node.created_at) > new Date(lastViewedAt) : false) && !readCommentIds.has(node.id)}
+                        onRead={() => handleMarkAsRead(node.id)}
+                        replyCount={node.children.length}
+                        // Use isReply true if it has a parent (not root)
+                        isReply={!!node.parent_id}
+                    >
+                        {node.children.length > 0 && (
+                            <div className="flex flex-col mt-2 border-l border-slate-800/50 pl-4">
+                                <RecursiveCommentList
+                                    nodes={node.children}
+                                    threadId={threadId}
+                                    handleReply={handleReply}
+                                    handleMarkAsRead={handleMarkAsRead}
+                                    lastViewedAt={lastViewedAt}
+                                    readCommentIds={readCommentIds}
+                                />
+                            </div>
+                        )}
+                    </CommentItem>
+                </div>
+            ))}
+        </>
     );
 }

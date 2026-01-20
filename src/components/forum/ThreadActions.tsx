@@ -103,8 +103,9 @@ export function ThreadActions({ thread }: ThreadActionsProps) {
                             <DropdownMenuItem
                                 className="text-rose-500 focus:text-rose-500 focus:bg-rose-950/20"
                                 onClick={() => {
-                                    if (confirm("Are you sure you want to delete this thread?")) {
-                                        handleAction(() => deleteThread(thread.id).then(res => {
+                                    const reason = prompt("Reason for deleting this thread?", "User deleted");
+                                    if (reason) {
+                                        handleAction(() => deleteThread(thread.id, reason).then(res => {
                                             if (!res.error) window.location.href = "/forum";
                                             return res;
                                         }), "Deleted");

@@ -49,9 +49,9 @@ export default async function ProfilePage({ params }: Props) {
 
                     <div className="relative flex flex-col md:flex-row items-start gap-6 pt-4">
                         <Avatar className="h-28 w-28 border-4 border-slate-900 shadow-xl bg-slate-800">
-                            <AvatarImage src={profile.avatar_url} />
+                            <AvatarImage src={profile.avatar_url || undefined} />
                             <AvatarFallback className="text-3xl font-bold bg-slate-800 text-emerald-500">
-                                {profile.username.substring(0, 2).toUpperCase()}
+                                {profile.username?.substring(0, 2).toUpperCase() || "U"}
                             </AvatarFallback>
                         </Avatar>
 

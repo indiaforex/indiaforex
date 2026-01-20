@@ -5,8 +5,12 @@ import { cn } from '@/lib/utils';
 import { useMarketData, MarketItem } from '@/hooks/useMarketData';
 import { motion } from 'framer-motion';
 
-export default function MarketTicker() {
-    const { marketData } = useMarketData();
+interface MarketTickerProps {
+    initialData?: MarketItem[];
+}
+
+export default function MarketTicker({ initialData }: MarketTickerProps) {
+    const { marketData } = useMarketData(initialData);
 
     // Use default static data while loading or if fallback needed, 
     // but better to just show loading state or empty marqee

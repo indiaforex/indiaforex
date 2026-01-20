@@ -16,9 +16,10 @@ interface AddCommentFormProps {
     replyingTo?: UserProfile;
     onCancelReply?: () => void;
     autoFocus?: boolean;
+    onOptimisticAdd?: (content: string, parentId?: string | null) => void;
 }
 
-export function AddCommentForm({ threadId, parentId, replyingTo, onCancelReply, autoFocus }: AddCommentFormProps) {
+export function AddCommentForm({ threadId, parentId, replyingTo, onCancelReply, autoFocus, onOptimisticAdd }: AddCommentFormProps) {
     const { user, profile, isLoading } = useAuth();
     const [content, setContent] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,6 +49,11 @@ export function AddCommentForm({ threadId, parentId, replyingTo, onCancelReply, 
         if (!content.trim()) return;
 
         setIsSubmitting(true);
+
+        // Optimistic UI Update
+        if (onOptimisticAdd) {
+            onOptimisticAdd(content, parentId);
+        }
 
         try {
             await createComment(threadId, content, parentId);

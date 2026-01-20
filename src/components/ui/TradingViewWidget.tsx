@@ -3,13 +3,19 @@
 import { useEffect, useRef, memo } from "react";
 
 function TradingViewWidget({ symbol }: { symbol: string }) {
-    const container = useRef<HTMLSpanElement>(null);
-    const id = useRef(`tv_${Math.random().toString(36).substring(2, 9)}`).current;
-    const isAppended = useRef(false);
+    const container = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (!container.current || isAppended.current) return;
-        isAppended.current = true;
+        const currentContainer = container.current;
+        if (!currentContainer) return;
+
+        // Cleanup function for internal use
+        // We create a container div for the widget
+        const widgetContainer = document.createElement("div");
+        widgetContainer.className = "tradingview-widget-container__widget";
+        widgetContainer.style.height = "calc(100% - 32px)";
+        widgetContainer.style.width = "100%";
+        currentContainer.appendChild(widgetContainer);
 
         const script = document.createElement("script");
         script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
@@ -26,18 +32,20 @@ function TradingViewWidget({ symbol }: { symbol: string }) {
             "enable_publishing": false,
             "allow_symbol_change": true,
             "calendar": false,
-            "container_id": id,
             "support_host": "https://www.tradingview.com"
         });
+        currentContainer.appendChild(script);
 
-        container.current.appendChild(script);
-
-    }, [symbol, id]);
+        return () => {
+            // Aggressive cleanup to prevent 'contentWindow' errors
+            if (currentContainer) {
+                currentContainer.innerHTML = "";
+            }
+        };
+    }, [symbol]);
 
     return (
-        <span className="tradingview-widget-container h-full w-full block" ref={container} style={{ height: "100%", width: "100%" }}>
-            <span id={id} className="tradingview-widget-container__widget block" style={{ height: "calc(100% - 32px)", width: "100%" }}></span>
-        </span>
+        <div className="tradingview-widget-container h-full w-full" ref={container} style={{ height: "100%", width: "100%" }} />
     );
 }
 

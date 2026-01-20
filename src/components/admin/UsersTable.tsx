@@ -9,11 +9,15 @@ import { Loader2, Search, Ban, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
+import { useAuth } from "@/context/AuthProvider";
+
 export function UsersTable() {
+    const { profile: currentUser } = useAuth();
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
     const [processing, setProcessing] = useState<string | null>(null);
+
 
     useEffect(() => {
         loadUsers();
@@ -21,10 +25,21 @@ export function UsersTable() {
 
     const loadUsers = async (query?: string) => {
         setLoading(true);
+        // We need to know WHO is looking to determine button state
+        // getUsers doesn't return current user info, assume useAuth context or fetch separate?
+        // Let's use useAuth for efficiency if available or fetch.
+        // Since this is client component, useAuth is best but it wasn't imported.
+        // Using direct supabase client here for quick profile fetch if useAuth not available, 
+        // OR simply update component to use useAuth.
+
         const data = await getUsers(query);
         setUsers(data);
         setLoading(false);
     };
+
+    // We need current user role. 
+    // Let's import useAuth inside component? No, top level
+
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -106,7 +121,16 @@ export function UsersTable() {
                                         size="sm"
                                         variant={user.is_banned ? "outline" : "destructive"}
                                         onClick={() => toggleBan(user)}
-                                        disabled={!!processing || user.role === 'admin'}
+                                        disabled={
+                                            !!processing ||
+                                            user.id === currentUser?.id ||
+                                            (currentUser?.role === 'admin' && (user.role === 'admin' || user.role === 'super_admin')) ||
+                                            user.role === 'super_admin' // Only Super Admin can ban, but they already pass checks. Actually Super Admin can ban Admin. 
+                                            // Wait, if I am Admin, line above handles it.
+                                            // If I am Super Admin, I can ban anyone except myself (handled by user.id check).
+                                            // If I am Super Admin, user.role 'super_admin' check:
+                                            // Super Admin vs Super Admin? Typically avoid.
+                                        }
                                         className="h-8"
                                     >
                                         {processing === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> :

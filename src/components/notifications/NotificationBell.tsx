@@ -88,6 +88,7 @@ export function NotificationBell() {
     }, [user]);
 
     const markAsRead = async () => {
+        if (!user) return;
         if (unreadCount === 0) return;
 
         // Optimistic
@@ -132,40 +133,52 @@ export function NotificationBell() {
                         </div>
                     ) : (
                         <div className="flex flex-col">
-                            {notifications.map(n => (
-                                <Link
-                                    key={n.id}
-                                    href={`/forum/${n.resource_slug}`}
-                                    className={`p-4 border-b border-slate-800/50 hover:bg-slate-900/50 transition-colors flex gap-3 ${!n.is_read ? 'bg-slate-900/20' : ''}`}
-                                    onClick={() => setIsOpen(false)}
-                                >
-                                    <div className="h-8 w-8 rounded bg-slate-800 shrink-0 flex items-center justify-center overflow-hidden border border-slate-700">
-                                        {n.actor.avatar_url ? (
-                                            <img src={n.actor.avatar_url} className="h-full w-full object-cover" />
-                                        ) : (
-                                            <span className="text-xs font-bold text-slate-400">{n.actor.username.substring(0, 2).toUpperCase()}</span>
+                            {Object.values(notifications.reduce((acc, n) => {
+                                const key = `${n.type}-${n.resource_id}`;
+                                if (!acc[key]) acc[key] = [];
+                                acc[key].push(n);
+                                return acc;
+                            }, {} as Record<string, Notification[]>)).map(group => {
+                                const latest = group[0];
+                                const count = group.length;
+                                const others = count - 1;
+
+                                return (
+                                    <Link
+                                        key={latest.id}
+                                        href={`/forum/${latest.resource_slug}`}
+                                        className={`p-4 border-b border-slate-800/50 hover:bg-slate-900/50 transition-colors flex gap-3 ${group.some(n => !n.is_read) ? 'bg-slate-900/20' : ''}`}
+                                        onClick={() => setIsOpen(false)}
+                                    >
+                                        <div className="h-8 w-8 rounded bg-slate-800 shrink-0 flex items-center justify-center overflow-hidden border border-slate-700">
+                                            {latest.actor.avatar_url ? (
+                                                <img src={latest.actor.avatar_url} className="h-full w-full object-cover" />
+                                            ) : (
+                                                <span className="text-xs font-bold text-slate-400">{latest.actor.username.substring(0, 2).toUpperCase()}</span>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs text-slate-300">
+                                                <span className="font-bold text-slate-200">{latest.actor.username}</span>
+                                                {others > 0 && <span className="text-slate-500"> and {others} others</span>}
+                                                {latest.type === 'reply_thread' && (others > 0 ? " replied to your thread" : " replied to your thread")}
+                                                {latest.type === 'reply_comment' && (others > 0 ? " replied to your comment" : " replied to your comment")}
+                                                {latest.type === 'mention' && (others > 0 ? " mentioned you" : " mentioned you")}
+                                                {latest.type === 'like' && (others > 0 ? " liked your post" : " liked your post")}
+                                            </p>
+                                            <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 font-mono italic">
+                                                "{latest.content_preview}"
+                                            </p>
+                                            <p className="text-[10px] text-slate-600 mt-1">
+                                                {formatDistanceToNow(new Date(latest.created_at), { addSuffix: true })}
+                                            </p>
+                                        </div>
+                                        {group.some(n => !n.is_read) && (
+                                            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
                                         )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs text-slate-300">
-                                            <span className="font-bold text-slate-200">{n.actor.username}</span>
-                                            {n.type === 'reply_thread' && " replied to your thread"}
-                                            {n.type === 'reply_comment' && " replied to your comment"}
-                                            {n.type === 'mention' && " mentioned you"}
-                                            {n.type === 'like' && " liked your post"}
-                                        </p>
-                                        <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 font-mono italic">
-                                            "{n.content_preview}"
-                                        </p>
-                                        <p className="text-[10px] text-slate-600 mt-1">
-                                            {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                                        </p>
-                                    </div>
-                                    {!n.is_read && (
-                                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-                                    )}
-                                </Link>
-                            ))}
+                                    </Link>
+                                );
+                            })}
                         </div>
                     )}
                 </div>

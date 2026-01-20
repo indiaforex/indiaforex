@@ -23,7 +23,7 @@ async function ensureAdmin() {
     return { user, supabase };
 }
 
-async function logAdminAction(adminId: string, action: string, targetId?: string, details?: any) {
+export async function logAdminAction(adminId: string, action: string, targetId?: string, details?: any) {
     const supabase = await createClient();
     await supabase.from('admin_logs').insert({
         admin_id: adminId,
@@ -101,6 +101,25 @@ export async function banUser(targetUserId: string) {
     try {
         const { user, supabase } = await ensureAdmin();
 
+        // Check actor role
+        const { data: actorProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        const actorRole = actorProfile?.role;
+
+        // Check target role
+        const { data: targetProfile } = await supabase.from('profiles').select('role').eq('id', targetUserId).single();
+        const targetRole = targetProfile?.role;
+
+        if (!targetProfile) throw new Error("User not found");
+        if (user.id === targetUserId) throw new Error("You cannot ban yourself");
+
+        // Hierarchy Rules
+        if (actorRole === 'admin') {
+            if (targetRole === 'admin' || targetRole === 'super_admin') {
+                throw new Error("Admins cannot ban other Admins or Super Admins");
+            }
+        }
+        // Super Admin can ban anyone except themselves (handled above)
+
         const { error } = await supabase
             .from('profiles')
             .update({ is_banned: true })
@@ -108,7 +127,7 @@ export async function banUser(targetUserId: string) {
 
         if (error) throw error;
 
-        await logAdminAction(user.id, 'ban_user', targetUserId);
+        await logAdminAction(user.id, 'ban_user', targetUserId, { targetRole });
         return { success: true };
     } catch (e: any) {
         return { error: e.message };
@@ -159,20 +178,45 @@ export async function getUsers(search?: string): Promise<UserProfile[]> {
 
 export async function getAdminLogs(): Promise<AdminLog[]> {
     try {
-        const { supabase } = await ensureAdmin();
+        const { supabase, user } = await ensureAdmin();
 
-        const { data, error } = await supabase
+        // Get current user role
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        const isSuperAdmin = profile?.role === 'super_admin';
+
+        let query = supabase
             .from('admin_logs')
             .select(`
                 *,
-                admin:profiles!admin_logs_admin_id_fkey (username, avatar_url)
+                admin:profiles!admin_logs_admin_id_fkey (username, role, avatar_url)
             `)
             .order('created_at', { ascending: false })
             .limit(50);
 
+        if (!isSuperAdmin) {
+            // Regular admins should NOT see Super Admin actions? or maybe just their own?
+            // "hide the ones super_admin deleted from other admins"
+            // We need to filter based on the Role of the admin_id in the log. 
+            // However, we can't join-filter easily in one go without a view or complex query.
+            // EASIER: Filter in application layer for MVP, or better:
+            // "admins can see only admin logs" -> WHERE admin_id's role != super_admin
+
+            // Actually, we can fetch the logs, and if the associated admin has role 'super_admin', filter it out.
+            // But we are selecting *, admin:profiles...
+            // Let's rely on the returned data structure.
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
 
-        return data as unknown as AdminLog[];
+        let logs = data as unknown as AdminLog[];
+
+        if (!isSuperAdmin) {
+            // Filter: Remove logs where the actor (admin) is a super_admin
+            logs = logs.filter((log: any) => log.admin?.role !== 'super_admin');
+        }
+
+        return logs;
     } catch (e) {
         console.error("Error fetching logs:", e);
         return [];
@@ -215,7 +259,7 @@ export async function banReportTargetAuthor(reportId: string) {
         if (reportError || !report) throw new Error("Report not found");
 
         // 2. Fetch author of the target
-        let table = report.target_type === 'thread' ? 'forum_threads' : 'forum_comments';
+        const table = (report.target_type === 'thread' ? 'forum_threads' : 'forum_comments') as 'forum_threads' | 'forum_comments';
         const { data: target, error: targetError } = await supabase
             .from(table)
             .select('author_id')

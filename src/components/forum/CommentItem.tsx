@@ -26,7 +26,7 @@ interface CommentItemProps {
 }
 
 export function CommentItem({ comment, isReply = false, threadId, onReply, isNew = false, onRead, children, replyCount = 0 }: CommentItemProps) {
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const [showAuth, setShowAuth] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [liked, setLiked] = useState(false); // Ideally derived from prop if we check 'isLikedByMe'
@@ -70,10 +70,20 @@ export function CommentItem({ comment, isReply = false, threadId, onReply, isNew
     };
 
     const handleDelete = async () => {
-        if (!confirm("Are you sure you want to delete this comment?")) return;
+        // Skip prompt for own comments, require for others (admin action)
+        let reason = "User deleted";
+        if (user?.id !== comment.author_id) {
+            const input = prompt("Reason for deleting this user's comment?", "Violation of rules");
+            if (!input) return;
+            reason = input;
+        } else {
+            // Optional: still confirm for self?
+            if (!confirm("Are you sure you want to delete your comment?")) return;
+        }
+
         setIsDeleting(true);
         try {
-            await deleteComment(comment.id, threadId);
+            await deleteComment(comment.id, threadId, reason);
             toast.success("Comment deleted");
         } catch (error) {
             toast.error("Failed to delete comment");
@@ -123,9 +133,9 @@ export function CommentItem({ comment, isReply = false, threadId, onReply, isNew
             <div className="flex gap-2.5 group">
                 <div className="h-6 w-6 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden shrink-0 mt-0.5">
                     {comment.author?.avatar_url ? (
-                        <img src={comment.author.avatar_url} alt={comment.author.username} className="h-full w-full object-cover" />
+                        <img src={(comment.author.avatar_url || undefined) as string | undefined} alt={comment.author.username || "User"} className="h-full w-full object-cover" />
                     ) : (
-                        <span className="text-[10px] font-bold text-slate-400 font-mono">{comment.author?.username?.substring(0, 2).toUpperCase()}</span>
+                        <span className="text-[10px] font-bold text-slate-400 font-mono">{(comment.author?.username || "??").substring(0, 2).toUpperCase()}</span>
                     )}
                 </div>
 
@@ -134,6 +144,11 @@ export function CommentItem({ comment, isReply = false, threadId, onReply, isNew
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-slate-300 font-mono flex items-center gap-1">
                                 {comment.author?.username}
+                                {comment.author?.is_banned && (
+                                    <span className="ml-2 rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] font-bold text-red-500 border border-red-500/20">
+                                        BANNED
+                                    </span>
+                                )}
                                 <UserBadgeList badges={comment.author?.badges} className="flex gap-0.5" />
                             </span>
                             <span className="text-[10px] text-slate-600 font-mono">
@@ -169,7 +184,7 @@ export function CommentItem({ comment, isReply = false, threadId, onReply, isNew
                                     <Edit className="h-3 w-3" />
                                 </button>
                             )}
-                            {isOwner && !isCollapsed && (
+                            {(isOwner || profile?.role === 'admin' || profile?.role === 'super_admin') && !isCollapsed && (
                                 <button
                                     onClick={handleDelete}
                                     className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-slate-600 hover:text-red-500 p-1"

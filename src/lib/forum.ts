@@ -1,9 +1,11 @@
 "use server";
 
+
 import { ForumThread, ForumComment, PollOption, Poll, ForumCategory } from "@/types/forum";
 import { createClient } from "@/lib/supabase/server";
 import { REPUTATION_GATES } from "@/config/reputation";
 import { stewardPinThread, stewardLockThread } from "@/lib/stewardship";
+import { processMentions } from "@/lib/notifications";
 
 export async function createThread(
     thread: { title: string; content: string; category: string; tags: string[]; author_id: string },
@@ -69,6 +71,12 @@ export async function createThread(
             console.error("Error creating poll:", pollError);
         }
     }
+
+    // 3. Process Mentions
+    // We execute this asynchronously and don't await/block the response
+    // But since it's a server action, maybe better to await to ensure it runs? 
+    // Usually Vercel functions might freeze if we don't await.
+    await processMentions(thread.content, threadData.id, 'thread', thread.author_id, threadData.id);
 
     return { data: threadData };
 }
@@ -145,15 +153,8 @@ export async function voteOnPoll(pollId: string, optionId: string, userId: strin
 
     if (voteError) return { error: voteError.message };
 
-    // 4. Update Options Count
-    const newOptions = poll.options.map((opt: any) =>
-        opt.id === optionId ? { ...opt, votes: (opt.votes || 0) + 1 } : opt
-    );
-
-    await supabase
-        .from('forum_polls')
-        .update({ options: newOptions })
-        .eq('id', pollId);
+    // 4. Update Options Count - REMOVED TO PREVENT RACE CONDITION
+    // We now calculate votes dynamically in getThreadById
 
     return { success: true };
 }
@@ -170,10 +171,20 @@ export async function toggleThreadLock(threadId: string, isLocked: boolean) {
     return await stewardLockThread(threadId, isLocked);
 }
 
-export async function deleteThread(threadId: string) {
+export async function deleteThread(threadId: string, reason: string = 'User deleted') {
     // RLS handles this (Author OR Steward OR Admin)
+    // Soft Delete
     const supabase = await createClient();
-    return await supabase.from('forum_threads').delete().eq('id', threadId);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    return await supabase
+        .from('forum_threads')
+        .update({
+            deleted_at: new Date().toISOString(),
+            deleted_by: user?.id,
+            deletion_reason: reason
+        })
+        .eq('id', threadId);
 }
 
 export async function updateThread(threadId: string, updates: { title?: string; content?: string; category?: string }) {
@@ -216,10 +227,11 @@ export async function getThreads({ page = 1, limit = 10, search, category, userI
         .select(`
             *,
             author:profiles!forum_threads_author_id_fkey (
-                id, username, avatar_url, reputation_points, role, created_at
+                id, username, avatar_url, reputation_points, role, is_banned, created_at
             ),
              poll:forum_polls(*)
-        `, { count: 'exact' });
+        `, { count: 'exact' })
+        .is('deleted_at', null);
 
     if (search) {
         query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
@@ -254,7 +266,7 @@ export async function getThreads({ page = 1, limit = 10, search, category, userI
     }
 
     return {
-        threads: data as unknown as ForumThread[],
+        threads: (data || []) as unknown as ForumThread[],
         total: count || 0
     };
 }
@@ -269,7 +281,7 @@ export async function getBookmarkedThreads(userId: string) {
             thread:forum_threads!inner(
                 *,
                 author:profiles!forum_threads_author_id_fkey (
-                    id, username, avatar_url, reputation_points, role, created_at, badges:user_badges(badge:badges(*))
+                    id, username, avatar_url, reputation_points, role, is_banned, created_at, badges:user_badges(badge:badges(*))
                 ),
                 poll:forum_polls(*)
             )
@@ -283,7 +295,9 @@ export async function getBookmarkedThreads(userId: string) {
     }
 
     // Flatten structure
-    return data.map((b: any) => b.thread) as ForumThread[];
+    // We cast the mapped result, not individual items to avoid complex relation typing here
+    const threads = (data || []).map(b => b.thread);
+    return threads as unknown as ForumThread[];
 }
 
 export async function getRecentThreads(limit = 10, pinnedLimit = 3): Promise<ForumThread[]> {
@@ -295,7 +309,7 @@ export async function getRecentThreads(limit = 10, pinnedLimit = 3): Promise<For
         .select(`
             *,
             author:profiles!forum_threads_author_id_fkey (
-                id, username, avatar_url, reputation_points, role, created_at, badges:user_badges(badge:badges(*))
+                id, username, avatar_url, reputation_points, role, is_banned, created_at, badges:user_badges(badge:badges(*))
             ),
              poll:forum_polls(*)
         `)
@@ -315,11 +329,12 @@ export async function getRecentThreads(limit = 10, pinnedLimit = 3): Promise<For
             .select(`
                 *,
                 author:profiles!forum_threads_author_id_fkey (
-                    id, username, avatar_url, reputation_points, role, created_at, badges:user_badges(badge:badges(*))
+                    id, username, avatar_url, reputation_points, role, is_banned, created_at, badges:user_badges(badge:badges(*))
                 ),
                  poll:forum_polls(*)
             `)
             .eq('is_pinned', false)
+            .is('deleted_at', null)
             .order('created_at', { ascending: false })
             .limit(remainingLimit);
 
@@ -342,6 +357,7 @@ export async function getThreadById(id: string, userId?: string): Promise<ForumT
                 avatar_url,
                 reputation_points,
                 role,
+                is_banned,
                 created_at
             ),
             polls:forum_polls(*)
@@ -354,8 +370,38 @@ export async function getThreadById(id: string, userId?: string): Promise<ForumT
         return null;
     }
 
-    const threadData = data as any;
-    let polls = (threadData.polls || []) as Poll[];
+    const thread = data as unknown as ForumThread;
+    let polls = (thread.polls || []) as Poll[];
+    const activePoll = polls.find(p => p.status === 'active');
+
+    // DYNAMIC VOTE COUNTING (Fixes Race Condition)
+    // We only recalculate for the active poll to save bandwidth
+    if (activePoll) {
+        // Fetch ALL votes for this poll
+        const { data: allVotes } = await supabase
+            .from('forum_poll_votes')
+            .select('option_id')
+            .eq('poll_id', activePoll.id);
+
+        if (allVotes) {
+            // Aggregate counts
+            const counts: Record<string, number> = {};
+            allVotes.forEach(v => {
+                counts[v.option_id] = (counts[v.option_id] || 0) + 1;
+            });
+
+            // Hydrate options with real counts
+            // Ensure options is an array
+            const currentOptions = Array.isArray(activePoll.options)
+                ? activePoll.options as PollOption[]
+                : [];
+
+            activePoll.options = currentOptions.map(opt => ({
+                ...opt,
+                votes: counts[opt.id] || 0
+            }));
+        }
+    }
 
     // Fetch user votes if logged in
     if (userId && polls.length > 0) {
@@ -373,21 +419,25 @@ export async function getThreadById(id: string, userId?: string): Promise<ForumT
         }
     }
 
-    // Find active poll, or sort by created_at desc to get latest?
-    // Prioritize 'active'. If multiple active (shouldn't happen), take latest.
-    const activePoll = polls.find(p => p.status === 'active');
+    // Update the active poll in the polls array if it was modified
+    if (activePoll) {
+        const idx = polls.findIndex(p => p.id === activePoll.id);
+        if (idx !== -1) polls[idx] = activePoll;
+    }
 
     return {
-        ...threadData,
+        ...thread,
         poll: activePoll, // Can be undefined
         polls: polls
-    } as ForumThread;
+    };
 }
 
-export async function getComments(threadId: string): Promise<ForumComment[]> {
+export async function getComments(threadId: string, page = 1, limit = 50): Promise<{ comments: ForumComment[], total: number }> {
     const supabase = await createClient();
+    const start = (page - 1) * limit;
+    const end = start + limit - 1;
 
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
         .from('forum_comments')
         .select(`
             *,
@@ -397,18 +447,24 @@ export async function getComments(threadId: string): Promise<ForumComment[]> {
                 avatar_url,
                 reputation_points,
                 role,
+                is_banned,
                 created_at
             )
-        `)
+        `, { count: 'exact' })
         .eq('thread_id', threadId)
-        .order('created_at', { ascending: true }); // Chronological for traditional forum
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true }) // Chronological
+        .range(start, end);
 
     if (error) {
-        console.error(`Error fetching comments for ${threadId}:`, error);
-        return [];
+        console.error(`Error fetching comments for ${threadId}: `, error);
+        return { comments: [], total: 0 };
     }
 
-    return data as unknown as ForumComment[];
+    return {
+        comments: (data || []) as unknown as ForumComment[],
+        total: count || 0
+    };
 }
 
 export async function getUserThreads(userId: string): Promise<ForumThread[]> {
@@ -417,26 +473,28 @@ export async function getUserThreads(userId: string): Promise<ForumThread[]> {
     const { data, error } = await supabase
         .from('forum_threads')
         .select(`
-            *,
-            author:profiles!forum_threads_author_id_fkey (
-                id,
-                username,
-                avatar_url,
-                reputation_points,
-                role,
-                created_at
-            )
+        *,
+        author: profiles!forum_threads_author_id_fkey(
+            id,
+            username,
+            avatar_url,
+            reputation_points,
+            role,
+            is_banned,
+            created_at
+        )
         `)
         .eq('author_id', userId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(10);
 
     if (error) {
-        console.error(`Error fetching threads for user ${userId}:`, error);
+        console.error(`Error fetching threads for user ${userId}: `, error);
         return [];
     }
 
-    return data as unknown as ForumThread[];
+    return (data || []) as unknown as ForumThread[];
 }
 
 export async function getUserComments(userId: string): Promise<ForumComment[]> {
@@ -445,26 +503,28 @@ export async function getUserComments(userId: string): Promise<ForumComment[]> {
     const { data, error } = await supabase
         .from('forum_comments')
         .select(`
-            *,
-            author:profiles!forum_comments_author_id_fkey (
-                id,
-                username,
-                avatar_url,
-                reputation_points,
-                role,
-                created_at
-            )
+        *,
+        author: profiles!forum_comments_author_id_fkey(
+            id,
+            username,
+            avatar_url,
+            reputation_points,
+            role,
+            is_banned,
+            created_at
+        )
         `)
         .eq('author_id', userId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(10);
 
     if (error) {
-        console.error(`Error fetching comments for user ${userId}:`, error);
+        console.error(`Error fetching comments for user ${userId}: `, error);
         return [];
     }
 
-    return data as unknown as ForumComment[];
+    return (data || []) as unknown as ForumComment[];
 }
 
 export async function getUserStats(userId: string) {
@@ -537,5 +597,5 @@ export async function getCategories(): Promise<ForumCategory[]> {
         return [];
     }
 
-    return data as ForumCategory[];
+    return (data || []) as ForumCategory[];
 }

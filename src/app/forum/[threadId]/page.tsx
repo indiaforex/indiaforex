@@ -42,14 +42,14 @@ export default async function ThreadPage({ params }: Props) {
         recordThreadView(threadId, user.id).catch(err => console.error(err));
     }
 
-    const comments = await getComments(threadId);
+    const { comments, total } = await getComments(threadId);
 
     return (
         <div className="mx-auto max-w-7xl font-mono flex flex-col -mb-14">
             <ThreadStickyHeader thread={thread} />
             {/* ... (rest of render) ... */}
             <div className="flex-1 min-h-0">
-                <CommentSection comments={comments} threadId={threadId} lastViewedAt={lastViewedAt}>
+                <CommentSection comments={comments} totalComments={total} threadId={threadId} lastViewedAt={lastViewedAt}>
                     <div className="pt-4">
                         <Link href="/forum" className="inline-flex items-center gap-2 group mb-4">
                             <Button variant="outline" size="sm" className="h-8 gap-2 bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-600 transition-all font-mono">
@@ -111,7 +111,7 @@ export default async function ThreadPage({ params }: Props) {
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2 md:pt-4 border-t border-slate-800/50 pl-2">
                                 {/* Left: Tags */}
                                 <div className="flex flex-wrap gap-2">
-                                    {thread.tags.map(tag => (
+                                    {(thread.tags || []).map(tag => (
                                         <span key={tag} className="text-[10px] text-slate-500 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
                                             #{tag}
                                         </span>

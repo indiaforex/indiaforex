@@ -7,6 +7,7 @@ import "@uiw/react-md-editor/markdown-editor.css";
 import "@uiw/react-markdown-preview/markdown.css";
 import { cn } from "@/lib/utils";
 import TradingViewWidget from "./TradingViewWidget";
+import rehypeSanitize from "rehype-sanitize";
 
 const MDEditor = dynamic(
     () => import("@uiw/react-md-editor"),
@@ -47,6 +48,9 @@ export function RichTextEditor({
                     backgroundColor: 'transparent',
                     color: 'inherit',
                     borderColor: 'rgb(30 41 59)'
+                }}
+                previewOptions={{
+                    rehypePlugins: [[rehypeSanitize]]
                 }}
             />
         </div>
@@ -110,6 +114,7 @@ export function MarkdownPreview({ source, style, className }: { source: string, 
             style={style}
             className={className}
             components={components}
+            rehypePlugins={[rehypeSanitize]}
         />
     );
 }

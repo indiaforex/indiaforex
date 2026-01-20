@@ -102,3 +102,42 @@ drop policy if exists "Admins can delete any comment" on forum_comments;
 create policy "Admins can delete any comment"
   on forum_comments for delete
   using ( exists (select 1 from profiles where id = auth.uid() and role in ('admin', 'super_admin')) );
+
+
+-- ==========================================
+-- PHASE 10: PERFORMANCE OPTIMIZATIONS (V1)
+-- ==========================================
+
+-- Index Foreign Keys for faster Joins
+create index if not exists idx_forum_threads_author on forum_threads(author_id);
+create index if not exists idx_forum_threads_category on forum_threads(category);
+create index if not exists idx_forum_comments_thread on forum_comments(thread_id);
+create index if not exists idx_forum_comments_author on forum_comments(author_id);
+create index if not exists idx_forum_comments_parent on forum_comments(parent_id);
+create index if not exists idx_forum_likes_thread on forum_likes(thread_id);
+create index if not exists idx_forum_likes_comment on forum_likes(comment_id);
+
+
+-- ==========================================
+-- PHASE 11: DATA SAFETY (SOFT DELETES)
+-- ==========================================
+
+-- 1. Add Soft Delete Columns to Threads
+do $$
+begin
+  if not exists (select 1 from information_schema.columns where table_name = 'forum_threads' and column_name = 'deleted_at') then
+    alter table forum_threads add column deleted_at timestamp with time zone;
+    alter table forum_threads add column deleted_by uuid references profiles(id);
+    alter table forum_threads add column deletion_reason text;
+  end if;
+end $$;
+
+-- 2. Add Soft Delete Columns to Comments
+do $$
+begin
+  if not exists (select 1 from information_schema.columns where table_name = 'forum_comments' and column_name = 'deleted_at') then
+    alter table forum_comments add column deleted_at timestamp with time zone;
+    alter table forum_comments add column deleted_by uuid references profiles(id);
+    alter table forum_comments add column deletion_reason text;
+  end if;
+end $$;
