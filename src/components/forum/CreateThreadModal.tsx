@@ -113,7 +113,7 @@ export function CreateThreadModal() {
     };
 
     // Role Check
-    const isAllowed = profile?.role === 'admin' || profile?.role === 'high_level' || profile?.role === 'moderator' || profile?.role === 'user'; // Allow users to post for now
+    const isAllowed = profile?.role === 'admin' || profile?.role === 'super_admin' || profile?.role === 'high_level' || profile?.role === 'moderator' || profile?.role === 'user'; // Allow users to post for now
 
     if (!user) return null;
 

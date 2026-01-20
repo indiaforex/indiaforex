@@ -26,7 +26,7 @@ export function ThreadActions({ thread }: ThreadActionsProps) {
     const [showEdit, setShowEdit] = useState(false);
 
     // Permissions
-    const isAdmin = profile?.role === 'admin' || profile?.role === 'high_level' || profile?.role === 'moderator';
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin' || profile?.role === 'high_level' || profile?.role === 'moderator';
     const isAuthor = user?.id === thread.author_id;
 
     if (!user) return null;
