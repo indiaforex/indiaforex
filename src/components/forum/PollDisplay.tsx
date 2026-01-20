@@ -67,7 +67,7 @@ export function PollDisplay({ poll }: PollDisplayProps) {
                 // 3. Rollback on Error
                 setHasVoted(false);
                 setOptions(previousOptions);
-                toast.error(typeof error === 'string' ? error : error.message);
+                toast.error(error);
             } else {
                 // 4. Success
                 toast.success("Vote registered!");
