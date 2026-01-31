@@ -1,174 +1,112 @@
-# IndiaForex Market Institutional Terminal - Product Showcase & Strategic Overview
+# IndiaForex Market Institutional Terminal
 
 # Visit the Deployment at https://indiaforex.vercel.app/
+# Visit the Repo at https://github.com/indiaforex/indiaforex/
 
-**Version:** 1.0 (Draft)  
-**Date:** January 2026  
-**Confidentiality:** Internal Draft for Buyer Review
+> **A high-performance financial intelligence platform bridging institutional-grade market data with community-driven insights.**
 
----
+## 1. System Architecture
 
-## 1. Executive Summary
+The project adopts a **Serverless Hybrid Architecture**, leveraging **Next.js 15 (App Router)** for the frontend and **Supabase (PostgreSQL)** for the backend. It prioritizes "Zero-Click Latency" and real-time data synchronization.
 
-**IndiaForex Market Board** is a comprehensive, next-generation financial intelligence platform designed for the modern Indian trader. It bridges the gap between raw market data and actionable community insights. Unlike static news portals, this is a **living ecosystem** where real-time data meets peer-to-peer validation.
+### **Core Stack**
+*   **Frontend:** Next.js 15.1, React 19, Tailwind CSS v4, Framer Motion.
+*   **Database:** PostgreSQL 15 (Supabase) with `uuid-ossp` extension.
+*   **Auth:** Supabase Auth (JWT + RLS) with Google/GitHub/Twitter OAuth providers.
+*   **State Management:** Server Actions for mutations, `unstable_cache` (ISR) for data fetching, and optimistic UI updates.
 
-The platform is built on three pillars:
+### **Realtime Event Architecture**
+The application actively utilizes **Supabase Realtime (WebSockets)** to broadcast state changes instantly to connected clients.
+*   **Pub/Sub Model:** The PostgreSQL database acts as the single source of truth, broadcasting `INSERT`, `UPDATE`, and `DELETE` events via the `supabase_realtime` publication.
+*   **Active Channels:**
+    *   `notifications`: Users receive instant alerts (toast + bell badge) when mentioned or replied to, without refreshing.
+    *   `forum_comments`: Thread discussions update live as new comments are posted by other users.
+    *   `forum_categories`: Category structure updates propagate instantly (metadata sync).
+*   **Client-Side Subscription:** Implemented via `supabase.channel().on('postgres_changes', ...)` hooks in React components (`NotificationBell.tsx`, `CommentSection.tsx`).
 
-1. **Real-Time Intelligence:** Live scanners and economic data.  
-2. **Community Alpha:** A reputation-based forum where high-quality insight rises to the top.  
-3. **Gamified Engagement:** A unique system that turns analysis into a competitive sport.
+### **Data Pipeline Strategy**
+The application employs a dual-pipeline strategy for data delivery:
 
-> <img width="800" height="407" alt="image" src="https://github.com/user-attachments/assets/559bcc7d-3d72-45aa-a597-9b8072ad54c6">
-
----
-
-## 2. Core Features & Architecture
-
-### 2.1 The Command Center (Dashboard)
-
-The Dashboard is the first screen users see. It is engineered for **Zero-Click Latency** — all critical information is visible immediately without navigation.
-
-#### **A. Global Market Watch**
-
-*Real-time pulse of the global indices.*
-
-- **Feature:** Tracks major global indices (GIFT Nifty, Dow Jones, NASDAQ, DAX, Nikkei) in real-time.
-- **User Value:** Traders get an immediate specialized view of global sentiment before the Indian market opens.
-- **Visuals:** Color-coded heatmaps and sparklines for instant trend recognition.
-
-> <img width="532" height="659" alt="image" src="https://github.com/user-attachments/assets/dff97728-49db-4d46-b432-331471258437">
-
-#### **B. Market Wire (News Feed)**
-
-*The narrative behind the numbers.*
-
-- **Feature:** Aggregated news feed from top financial sources, filtered for relevance to the Indian Forex and Equity markets.
-- **User Value:** Saves users from tab-switching. They get breaking news headlines as they happen, contextualized alongside price action.
-
-> <img width="599" height="679" alt="Market Wire News Feed" src="https://github.com/user-attachments/assets/5acdcb30-72c1-49d2-8d07-bfebf90907e7">
-
-#### **C. Live Market Scanner**
-
-*The hunter-seeker algorithm.*
-
-- **Feature:** An algorithmic scanner that identifies breakouts, volume shocks, and technical patterns (e.g., "Gap Up", "52W High") in real-time.
-- **User Value:** Automates the hunting process. Instead of scanning 500 charts, the user sees the top 5 emerging opportunities instantly.
-
-> <img width="800" height="270" alt="image" src="https://github.com/user-attachments/assets/feade1cf-4a84-4b76-82be-4a3385c9b6b4">
-> <img width="262" height="268" alt="image" src="https://github.com/user-attachments/assets/cd5e1bba-6514-4752-87f5-e05be4fcbee5">
+1.  **Cold Storage (CMS/Editorial):** Using **Google Sheets via SheetDB** as a headless CMS for the Economic Calendar.
+    *   **Dual-Write Workflow:**
+        *   **Direct:** Admins can edit the Google Sheet directly.
+            > <img width="800" height="325" alt="image" src="https://github.com/user-attachments/assets/091acc08-2e17-4400-978b-83f75330612c" />
+        *   **Application:** Users with the specialized `event_analyst` role can use the **Admin Panel > Events** form to append rows to the sheet via API.
+            > <img width="800" height="390" alt="image" src="https://github.com/user-attachments/assets/20dde580-a6f7-41e0-8ad7-bc80c710e49a" />
+    *   **Read Path:** Data is cached at the edge using Next.js ISR tags (`revalidate: 60`), ensuring site resilience even if the SheetDB API is rate-limited.
+    > <img width="800" height="728" alt="image" src="https://github.com/user-attachments/assets/21791a69-3b07-4242-b297-165597a36db2" />
+ 
+2.  **Hot Storage (Market Data):** Real-time fetching via `yahoo-finance2` on the server, protected by a 15-second deduplication cache (`unstable_cache`) to prevent rate-limiting while serving thousands of concurrent users.
 
 ---
 
-### 2.2 The Economic Calendar (The Core USP)
+## 2. Technical Features
 
-This is not just a list of dates; it is the **strategic backbone** of the platform for Forex traders.
+### **Command Center & Dashboard**
+> <img width="800" height="407" alt="image" src="https://github.com/user-attachments/assets/a32c685e-8dee-4781-9d09-04e301b1169a" />
 
-- **Feature:** A highly detailed timeline of global economic events (Fed rates, NFP, RBI announcements, inflation data).
-- **Impact Analysis:** Events tagged with High / Medium / Low impact and affected currency pairs.
-- **Consensus vs Actual:** Displays forecast vs actual to trade variance instantly.
-- **Smart Filtering:** Filter by country or impact.
-- **User Value:** Enables structured fundamental analysis and volatility planning.
+*   **Global Market Watch:** Aggregates real-time indices (NIFTY, SENSEX, NASDAQ) using server-side fetching.
+    > <img width="800" height="991" alt="image" src="https://github.com/user-attachments/assets/f2d3419b-7f6c-4f85-b5b2-5ea19d0b9687" />
+*   **Algorithmic Scanner:** "Live Market Scanner" component runs simple heuristics (Gap Up, Volume Shock) on fetched payloads to surface opportunities instantly.
+    > <img width="800" height="271" alt="image" src="https://github.com/user-attachments/assets/4842dea6-82fc-418c-9c90-245a98ee60b6" />
+*   **Sector Heatmap:** Visualizes relative performance of top 10 constituents using color scales effectively.
+    > <img width="800" height="466" alt="image" src="https://github.com/user-attachments/assets/16da8ee2-dd65-49c8-8da9-de18dbfc03f8" />
 
-> <img width="800" height="727" alt="image" src="https://github.com/user-attachments/assets/f311118e-548f-4eed-9b88-3f26b69da515">
 
----
+### **Community Engine (The "Alpha" Core)**
+A from-scratch social platform built directly on Postgres.
+> <img width="800" height="407" alt="image" src="https://github.com/user-attachments/assets/353a37e9-6d00-43f2-9658-99b59294d0e8" />
 
-### 2.3 The Forum & Community System
 
-A modern, chat-style discussion platform built for high-signal financial conversations.
-
-#### **A. Dynamic Threading**
-
-- **Feature:** Dark-mode interface inspired by Discord/Slack, structured for finance.
-- **Innovation:** Users land on the latest messages (bottom-up scroll).
-- **Key Function:** Rich text, tagging (`$NIFTY`, `#Bullish`), direct replies.
-
-> <img width="800" height="407" alt="image" src="https://github.com/user-attachments/assets/01702a78-80a3-4737-ad53-51cb3422105b">
-
-#### **B. Engagement Highlights**
-
-- **Feature:** Dashboard surfaces high-traction community discussions.
-- **User Value:** Ensures discoverability of quality insights.
-
-> <img width="800" height="488" alt="image" src="https://github.com/user-attachments/assets/8951aea4-3b11-4ddc-9192-d517375f4841">
+*   **Recursive Threading:** Supports infinite nesting for deep discussions.
+    > <img width="800" height="303" alt="image" src="https://github.com/user-attachments/assets/a21c00b1-2ff8-4f64-9c11-0921387c7e41" />
+*   **Reputation System:**
+    *   **Logic:** Implemented via **PostgreSQL Triggers**, ensuring atomicity. Every `Like` or `Comment` fires a database function to update the user's `reputation_points`.
+    *   **Security:** Users cannot "game" the system; points are managed entirely by DB constraints, invalidating points if content is deleted.
+*   **Role-Based Access Control (RBAC):**
+    *   Hierarchy: `Guest` > `User` > `High Level` > `Steward` > `Event Analyst` > `Admin` > `Super Admin`.
+    *   **Stewards:** Can moderate *only* specific categories (e.g., "Crypto Steward" cannot moderate "Forex").
 
 ---
 
-## 3. The Reputation System (Gamification & Retention)
+## 3. Engineering Challenges & Workarounds
 
-The engine that drives quality contributions without heavy moderation.
+### **A. Role Integration with Supabase RLS**
+**Problem:** Supabase Auth handles authentication (identity), but our application relies on complex authorization (roles like `super_admin`) stored in a public `profiles` table.
+**Solution:**
+*   We use a **Trigger-based Sync** (`handle_new_user`) to auto-create a profile row upon signup.
+*   **Hybrid RLS Policies:** Policies don't just check `auth.uid()`; they perform efficient sub-queries to the `profiles` table to check roles.
+    ```sql
+    -- Example Policy: Admins can update any thread
+    create policy "Admins can update any thread"
+      on forum_threads for update
+      using ( exists (select 1 from profiles where id = auth.uid() and role in ('admin', 'super_admin')) );
+    ```
+*   **Fix Implemented:** We had to explicitly `DROP` and recreate policies to ensure Admin overrides took precedence over standard "User can edit own post" policies, solving a "Forbidden" error for admins.
 
-### **The "Pro Trader" Journey**
+### **B. TradingView Integration in React**
+> <img width="800" height="293" alt="image" src="https://github.com/user-attachments/assets/a1e900e5-888b-4269-a9a9-2648cb29ded3" />
+**Problem:** The TradingView "Advanced Chart" widget relies on strictly imperative script injection and often throws `iframe contentWindow` errors when unmounted rapidly (e.g., during React Fast Refresh or tab switching).
+**Solution:**
+*   Wrapped the widget in a `memo`ized component with strictly controlled dependency arrays.
+*   Implemented a ref-based cleanup specifically targeting the script element to ensure clean unmounting.
+*   Used a specific container `id` generation strategy to avoid DOM collisions during re-renders.
 
-A meritocratic ladder powered by **Reputation Points (RP)**.
-
-1. **Earning RP**
-   - **Post Likes:** +5 RP  
-   - **Daily Login:** +1 RP  
-   - **Winning Predictions:** +50 RP *(In Pipeline)*  
-   - **Verified Analysis:** +100 RP *(Admin Awarded)*  
-
-   > <img width="792" height="313" alt="image" src="https://github.com/user-attachments/assets/5485fea2-c8fd-40a2-8669-e677b5a1afdb">
-
-2. **User Roles & Perks**
-   - **Rookie (0–10,000 RP):** Read-only premium threads  
-   - **Analyst (30,000–50,000 RP):** Can post charts/images  
-   - **Pro Trader (100,000+ RP):**
-     - Verified green badge  
-     - Access to high-impact rooms  
-     - Featured on leaderboards  
-
-> <img width="800" height="407" alt="image" src="https://github.com/user-attachments/assets/2adc1131-eb8f-43f2-9657-d70011cc2088">
-
-### **Engagement Loop**
-
-- **Leaderboards:** Weekly Top Trader rankings  
-- **Profile Showcase:** Public trading resume with stats  
-
----
-
-## 4. Monetization Strategy & Revenue Models
-
-### **Tier 1: Advertisement Inventory (Immediate)**
-
-- **Prime Sidebar Slot:** 300×250 ads for brokerages/tools
-- **Native Feed Ads:** Sponsored community threads
-
-> <img width="598" height="407" alt="image" src="https://github.com/user-attachments/assets/5e74e2fb-60bc-4fb5-91ff-e0fbdca3e393">
-
-### **Tier 2: Premium Subscriptions (High Margin)**
-
-**IndiaForex Pro ($15/month)**
-
-- Ad-free UI
-- Tick-by-tick real-time data
-- Advanced scanners
-- SMS / WhatsApp alerts
-
-### **Tier 3: The Alpha Marketplace (Future Scale)**
-
-- Paid premium threads (20% platform commission)
-- Profile & recruitment highlights
+### **C. The "Google Sheets as Backend" Pattern**
+**Problem:** Operations team needed to update "Economic Events" faster than a database admin panel could be built/deployed.
+**Solution:**
+*   Implemented `sheetdb.ts` adapter.
+*   **Optimization:** Configured Next.js to cache the SheetDB response for 60 seconds (`revalidate: 60`). This prevents hitting Google's strict API quotas while keeping the calendar "fresh enough" for macro news.
+*   **Resilience:** The adapter includes specific error handling for non-array responses, preventing the dashboard from crashing if the Sheet format is temporarily broken by a human editor.
 
 ---
 
-## 5. Engagement Upgrades (Competitions)
-
-- **Weekly Alpha Contest**
-  - Predict NIFTY / USDINR
-  - Rewards: 500 RP + 1 Month Premium
-
-- **Paper Trading League** *(In Pipeline)*
-  - Quarterly competitions with sponsored prizes
+## 4. Key Security Implementation
+*   **Row Level Security (RLS):** 100% of database access is protected by RLS. No server-side "service role" bypass is used for standard user actions.
+*   **XSS Protection:** Comments are sanitized using `rehype-sanitize` before rendering to prevent script injection in the rich text editor.
 
 ---
 
-## 6. Future Roadmap
-
-- **AI Sentiment Engine** *(In Pipeline)*
-- **Native Mobile Apps**
-- **Copy Trading Integration** *(Long Term)*
-
----
-
-*Note: All "In Pipeline" features are modular upgrades to the existing architecture.*
+## 5. Future Roadmap (Technical)
+*   Migration of `sheetdb` to a proper Postgres Table once the schema stabilizes or the operators get technically sound.
+*   Implementation of WebSocket subscriptions for "Live Ticker" pushing (currently polling/cached).
