@@ -1,5 +1,5 @@
 import AdContainer from "@/components/dashboard/AdContainer";
-import ForumHeader from "@/components/forum/ForumHeader";
+import Header from "@/components/layout/Header";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
 // This layout wraps all pages under /forum
@@ -11,7 +11,7 @@ export default function ForumLayout({
 }) {
     return (
         <DashboardLayout
-            header={<ForumHeader />}
+            header={<Header />}
             rightSidebar={<AdContainer className="h-full mt-0" />}
         >
             {/* 

@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Project Documentation and Schema
+DEPLOYMENT.md
+supabase_schema.sql
+auditandreports/

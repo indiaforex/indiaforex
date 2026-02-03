@@ -102,12 +102,15 @@ export default function AdminEvents() {
                 return;
             }
 
-            await addEvent(form);
-            toast.success('Event added successfully to SheetDB');
+            // Submit via Server Action for Logging
+            const { createEconomicEvent } = await import('@/lib/actions/events');
+            await createEconomicEvent(form);
+
+            toast.success('Event added successfully');
             setForm(initialForm); // Reset
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast.error('Failed to add event');
+            toast.error(error.message || 'Failed to add event');
         } finally {
             setSubmitting(false);
         }

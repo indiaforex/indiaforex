@@ -38,7 +38,8 @@ export default function Header() {
 
     const navLinks = [
         { name: 'Market Board', href: '/' },
-        { name: 'Forum', href: '/forum' }
+        { name: 'Forum', href: '/forum' },
+        { name: 'Quant', href: '/quant' }
     ];
 
     const isThreadPage = pathname?.startsWith('/forum') && pathname !== '/forum';
@@ -57,31 +58,31 @@ export default function Header() {
         <header className="glass-header sticky top-0 z-50 w-full h-16 bg-slate-950/80 backdrop-blur-md border-b border-slate-800">
             <div className="w-full h-full flex items-center justify-between px-4 lg:px-8">
                 {/* Left: Logo & Nav */}
-                <div className="flex items-center gap-6 flex-none">
-                    <Link href="/" className="flex items-center gap-3 group">
+                <div className="flex items-center gap-2 md:gap-6 flex-none">
+                    <Link href="/" className="flex items-center gap-2 md:gap-3 group shrink-0">
                         <div className="relative">
                             <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg blur opacity-40 group-hover:opacity-75 transition duration-500"></div>
                             <div className="relative bg-slate-900 border border-slate-700/50 p-1.5 rounded-lg">
-                                <BarChart3 className="h-6 w-6 text-blue-500" />
+                                <BarChart3 className="h-5 w-5 md:h-6 md:w-6 text-blue-500" />
                             </div>
                         </div>
-                        <div className="flex flex-col hidden sm:flex">
-                            <span className="font-bold text-lg tracking-tight text-slate-100 leading-none">
+                        <div className="flex flex-col">
+                            <span className="font-bold text-base md:text-lg tracking-tight text-slate-100 leading-none">
                                 India<span className="text-blue-500">Forex</span>
                             </span>
-                            <span className="text-[10px] text-slate-400 font-mono tracking-wider uppercase">
+                            <span className="text-[10px] text-slate-400 font-mono tracking-wider uppercase hidden sm:block">
                                 Institutional Terminal
                             </span>
                         </div>
                     </Link>
 
-                    {/* Desktop Nav */}
-                    <nav className="hidden lg:flex items-center gap-1 ml-6">
+                    {/* Desktop & Mobile Nav */}
+                    <nav className="flex items-center gap-1 md:ml-6">
                         {navLinks.map((link) => {
                             const isActive = pathname === link.href;
                             if (isActive) {
                                 return (
-                                    <span key={link.href} className="px-3 py-1.5 text-sm font-bold text-white cursor-default">
+                                    <span key={link.href} className="px-1.5 md:px-3 py-1.5 text-xs md:text-sm font-bold text-white cursor-default">
                                         {link.name}
                                     </span>
                                 );
@@ -90,7 +91,7 @@ export default function Header() {
                                 <Link
                                     key={link.href}
                                     href={link.href}
-                                    className="px-3 py-1.5 text-sm font-medium text-slate-400 hover:text-slate-200 transition"
+                                    className="px-1.5 md:px-3 py-1.5 text-xs md:text-sm font-medium text-slate-400 hover:text-slate-200 transition"
                                 >
                                     {link.name}
                                 </Link>

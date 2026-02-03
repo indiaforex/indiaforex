@@ -3,11 +3,12 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, ThumbsUp, Calendar, Settings, Activity, Clock } from "lucide-react";
+import { MessageSquare, ThumbsUp, Calendar, Settings, Activity, Clock, Medal } from "lucide-react";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { getUserThreads, getUserComments, getUserStats } from "@/lib/forum";
 import Link from "next/link";
+import { AchievementShowcase } from "@/components/gamification/AchievementShowcase";
 
 type Props = {
     params: Promise<{ username: string }>;
@@ -69,6 +70,9 @@ export default async function ProfilePage({ params }: Props) {
                                             Joined {format(new Date(profile.created_at), "MMM yyyy")}
                                         </span>
                                     </div>
+                                    <div className="mt-3">
+                                        <AchievementShowcase userId={profile.id} variant="mini" />
+                                    </div>
                                 </div>
                                 {isOwner && (
                                     <Button variant="outline" size="sm" className="gap-2 border-slate-700 hover:bg-slate-800 hover:text-white">
@@ -96,6 +100,8 @@ export default async function ProfilePage({ params }: Props) {
                         </div>
                     </div>
                 </div>
+
+
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Recent Threads */}

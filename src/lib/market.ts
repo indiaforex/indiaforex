@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import yahooFinance from 'yahoo-finance2';
+import { upstashRedis } from "./redis";
 
 const SYMBOLS = [
     "^NSEI",    // NIFTY 50
@@ -81,11 +82,51 @@ async function fetchMarketDataInternal(): Promise<MarketItem[]> {
 
 // Cached version of the fetch function
 // Revalidates every 15 seconds (shared across all users/requests)
-export const getMarketData = unstable_cache(
-    fetchMarketDataInternal,
-    ['market-data-full'],
-    {
-        revalidate: 15,
-        tags: ['market-data']
+
+export const getMarketData = async (): Promise<MarketItem[]> => {
+    try {
+        // 1. Try to fetch from Redis Snapshot (Batch Optimized)
+        // Key: "market:snapshot" contains all symbols
+        const snapshotRaw = await upstashRedis.get<Record<string, any>>('market:snapshot');
+
+        let snapshot = snapshotRaw;
+        if (typeof snapshotRaw === 'string') {
+            try { snapshot = JSON.parse(snapshotRaw); } catch (e) { }
+        }
+
+        const redisResults: MarketItem[] = [];
+        const missingSymbols: string[] = [];
+
+        // 2. Hydrate from Snapshot
+        SYMBOLS.forEach((symbol) => {
+            const data = snapshot && snapshot[symbol];
+
+            if (data && data.price !== undefined) {
+                redisResults.push({
+                    symbol,
+                    name: NAME_MAP[symbol] || symbol,
+                    price: data.price,
+                    change: data.change || 0,
+                    pChange: data.change || 0, // Worker saves 'change' as percent
+                    prevClose: 0,
+                    isOpen: true
+                });
+            } else {
+                missingSymbols.push(symbol);
+            }
+        });
+
+        // 3. Return partially cached or fully cached
+        if (redisResults.length > 0) {
+            return redisResults; // Return what we have
+        }
+
+        // 4. Fallback: If Redis is empty (Worker not running), usage old fetcher
+        console.log("Redis cache cold (snapshot missing), fetching live...");
+        return await fetchMarketDataInternal();
+
+    } catch (err) {
+        console.error("Market Data Redis Error:", err);
+        return await fetchMarketDataInternal();
     }
-);
+};

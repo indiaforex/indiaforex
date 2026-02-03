@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Search, Ban, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { useAuth } from "@/context/AuthProvider";
 
@@ -97,13 +98,12 @@ export function UsersTable() {
                         {users.map((user) => (
                             <tr key={user.id} className="border-b border-slate-700 hover:bg-slate-800/50">
                                 <td className="p-4 flex items-center gap-3">
-                                    <div className="h-8 w-8 rounded bg-slate-800 border-slate-700 flex items-center justify-center overflow-hidden">
-                                        {user.avatar_url ? (
-                                            <img src={user.avatar_url} className="h-full w-full object-cover" />
-                                        ) : (
-                                            <span className="text-secondary font-bold">{user.username?.substring(0, 2).toUpperCase()}</span>
-                                        )}
-                                    </div>
+                                    <Avatar className="h-8 w-8 border border-slate-700">
+                                        <AvatarImage src={user.avatar_url || ''} />
+                                        <AvatarFallback className="bg-slate-800 text-xs font-bold text-slate-400">
+                                            {user.username?.substring(0, 2).toUpperCase()}
+                                        </AvatarFallback>
+                                    </Avatar>
                                     <div className="font-medium">{user.username}</div>
                                 </td>
                                 <td className="p-4">{user.role}</td>

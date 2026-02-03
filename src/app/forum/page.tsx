@@ -3,6 +3,7 @@ import { getMarketData } from "@/lib/market";
 import { ForumHighlights } from "@/components/forum/ForumHighlights";
 import { CreateThreadModal } from "@/components/forum/CreateThreadModal";
 import { ForumSidebar } from "@/components/forum/ForumSidebar";
+import { MobileForumNav } from "@/components/forum/MobileForumNav";
 import MarketTicker from "@/components/dashboard/MarketTicker";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
@@ -71,9 +72,7 @@ export default async function ForumIndexPage({ searchParams }: Props) {
                 </div>
 
                 {/* Tabs / Filters (Mobile only - Desktop uses Sidebar) */}
-                <div className="md:hidden flex gap-2 overflow-x-auto pb-2">
-                    {/* Simplified mobile nav could go here */}
-                </div>
+                <MobileForumNav />
 
                 {/* Create Thread (Desktop) */}
                 <div className="hidden md:block p-4 border border-slate-800/60 bg-slate-900/20 rounded-lg">

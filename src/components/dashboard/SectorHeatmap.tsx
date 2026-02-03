@@ -131,7 +131,7 @@ export default function SectorHeatmap() {
         <>
             {/* Sidebar Widget (Clickable) */}
             <Card
-                className="rounded-md border-border/40 shadow-sm h-[160px] flex flex-col bg-card/50 backdrop-blur-sm cursor-pointer hover:border-emerald-500/50 transition-colors group mt-4 relative overflow-hidden"
+                className="rounded-md border-border/40 shadow-sm h-[160px] w-full flex flex-col bg-card/50 backdrop-blur-sm cursor-pointer hover:border-emerald-500/50 transition-colors group mt-4 relative overflow-hidden"
                 onClick={() => setIsModalOpen(true)}
             >
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">

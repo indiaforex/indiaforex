@@ -84,6 +84,10 @@ create policy "Users can update their own threads"
   on forum_threads for update
   using ( auth.uid() = author_id );
 
+create policy "Admins can update any thread"
+  on forum_threads for update
+  using ( exists (select 1 from profiles where id = auth.uid() and role in ('admin', 'super_admin')) );
+
 -- Unified Delete Policy (Author OR Admin/SuperAdmin)
 create policy "delete_policy_threads"
   on forum_threads for delete
@@ -125,6 +129,10 @@ create policy "Authenticated users can create comments"
 create policy "Users can update their own comments"
   on forum_comments for update
   using ( auth.uid() = author_id );
+
+create policy "Admins can update any comment"
+  on forum_comments for update
+  using ( exists (select 1 from profiles where id = auth.uid() and role in ('admin', 'super_admin')) );
 
 -- Unified Delete Policy (Author OR Admin/SuperAdmin)
 create policy "delete_policy_comments"
@@ -445,6 +453,7 @@ $$;
 
 create trigger tr_comment_notification
   after insert on public.forum_comments
+  for each row execute procedure public.handle_new_comment_notification();
 
 -- ==========================================
 -- 10. ROLE SYSTEM EXPANSION (Verified)
@@ -598,3 +607,199 @@ begin
     alter table forum_comments add column deletion_reason text;
   end if;
 end $$;
+
+
+-- ==========================================
+-- PHASE 12: REPUTATION SCALABILITY
+-- ==========================================
+
+-- 1. Create Logs Table
+create table if not exists reputation_logs (
+    id uuid default uuid_generate_v4() primary key,
+    user_id uuid references profiles(id) not null,
+    points int not null,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table reputation_logs enable row level security;
+create policy "Admins view logs" on reputation_logs for select using (exists (select 1 from profiles where id = auth.uid() and role in ('admin', 'super_admin')));
+
+-- 2. Modify Update Function to Log instead of Direct Update
+create or replace function public.update_reputation(
+  target_user_id uuid,
+  points int
+)
+returns void
+language plpgsql
+security definer 
+as $$
+begin
+  insert into public.reputation_logs (user_id, points)
+  values (target_user_id, points);
+end;
+$$;
+
+-- 3. Batch Processing Function (Atomic)
+create or replace function public.process_reputation_logs()
+returns void
+language plpgsql
+security definer
+as $$
+begin
+    with deleted_rows as (
+        delete from public.reputation_logs
+        returning user_id, points
+    ),
+    aggregated as (
+        select user_id, sum(points) as total
+        from deleted_rows
+        group by user_id
+    )
+    update public.profiles
+    set reputation_points = profiles.reputation_points + aggregated.total
+    from aggregated
+    where profiles.id = aggregated.user_id;
+end;
+$$;
+
+
+-- ==========================================
+-- PHASE 2: MARKET DATA ENGINE (Time-Series)
+-- ==========================================
+
+-- 1. Market Candles Table
+-- Stores OHLC+Volume data.
+-- Designed to be compatible with TimescaleDB (if enabled later).
+create table if not exists market_candles (
+    symbol text not null,
+    interval text not null, -- '1m', '5m', '1h', '1d'
+    bucket timestamp with time zone not null,
+    open numeric(18, 6),
+    high numeric(18, 6),
+    low numeric(18, 6),
+    close numeric(18, 6),
+    volume bigint,
+    primary key (symbol, interval, bucket)
+);
+
+-- 2. Indexes for Performance (Standard Postgres fallback)
+-- Efficient for querying "Last 50 candles for USDINR"
+create index if not exists idx_market_candles_query 
+  on market_candles (symbol, interval, bucket desc);
+
+-- 3. RLS (Public Read, Admin Write)
+alter table market_candles enable row level security;
+
+create policy "Market Data viewable by everyone"
+  on market_candles for select
+  using ( true );
+
+create policy "Workers/Admins can insert market data"
+  on market_candles for insert
+  with check ( 
+    -- For workers using Service Role key, this is bypassed.
+    -- For manual admin tools:
+    exists (select 1 from profiles where id = auth.uid() and role in ('admin', 'super_admin', 'high_level')) 
+  );
+
+
+
+-- ==========================================
+-- 7. PREDICTION POOLS (PHASE 3)
+-- ==========================================
+
+create table if not exists prediction_markets (
+    id uuid primary key default gen_random_uuid(),
+    symbol text not null,          -- e.g. "USDINR=X"
+    target_date date not null,     -- e.g. "2024-02-14"
+    open_price numeric not null,   -- Price at start of day
+    question text,                 -- Specific question text (optional)
+    status text default 'OPEN',    -- OPEN, CLOSED, SETTLED
+    resolution_price numeric,      -- Final outcome price
+    winner text,                   -- 'UP' or 'DOWN'
+    created_at timestamptz default now()
+);
+
+alter table prediction_markets enable row level security;
+create policy "Public markets are viewable by everyone" on prediction_markets for select using (true);
+create policy "Admins can manage markets" on prediction_markets for all using (
+    exists (select 1 from profiles where id = auth.uid() and role in ('admin', 'super_admin'))
+);
+
+create table if not exists market_bets (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid references auth.users(id) not null,
+    market_id uuid references prediction_markets(id) not null,
+    direction text not null check (direction in ('UP', 'DOWN')),
+    amount numeric not null check (amount > 0),
+    payout numeric,                -- Null until settled
+    status text default 'PENDING',  -- PENDING, WON, LOST
+    created_at timestamptz default now()
+);
+
+alter table market_bets enable row level security;
+create policy "Users can view their own bets" on market_bets for select using (auth.uid() = user_id);
+create policy "Users can place bets" on market_bets for insert with check (auth.uid() = user_id);
+
+
+-- ==========================================
+-- 8. QUANT WORKSPACE (PHASE 4)
+-- ==========================================
+
+create table if not exists user_alerts (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid references auth.users(id) not null,
+    symbol text not null,
+    condition text not null check (condition in ('ABOVE', 'BELOW')),
+    target_price numeric not null,
+    status text default 'ACTIVE' check (status in ('ACTIVE', 'TRIGGERED', 'DISABLED')),
+    created_at timestamptz default now()
+);
+
+alter table user_alerts enable row level security;
+create policy "Users manage own alerts" on user_alerts for all using (auth.uid() = user_id);
+
+
+-- ==========================================
+-- PHASE 5: GAMIFICATION & LEADERBOARD
+-- ==========================================
+
+create table if not exists achievements (
+    id uuid primary key default gen_random_uuid(),
+    slug text unique not null,
+    name text not null,
+    description text not null,
+    icon text not null, -- Lucide icon name
+    xp_reward int default 50,
+    created_at timestamptz default now()
+);
+
+alter table achievements enable row level security;
+create policy "Achievements viewable by everyone" on achievements for select using (true);
+create policy "Admins can manage achievements" on achievements for all using (
+    exists (select 1 from profiles where id = auth.uid() and role in ('admin', 'super_admin'))
+);
+
+create table if not exists user_achievements (
+    user_id uuid references profiles(id) not null,
+    achievement_id uuid references achievements(id) not null,
+    unlocked_at timestamptz default now(),
+    primary key (user_id, achievement_id)
+);
+
+alter table user_achievements enable row level security;
+create policy "User achievements viewable by everyone" on user_achievements for select using (true);
+create policy "System can grant achievements" on user_achievements for insert with check (false); 
+-- Note: Set to false so only Service Role (Workers) can grant achievements.
+
+-- Seed Data
+insert into achievements (slug, name, description, icon, xp_reward) values
+('first_win', 'First Blood', 'Win your first prediction market bet.', 'Swords', 100),
+('high_roller', 'High Roller', 'Place a bet of over 1000 reputation.', 'Gem', 500),
+('streak_3', 'Hot Hand', 'Win 3 bets in a row.', 'Flame', 250),
+('early_bird', 'Early Bird', 'Join the platform during beta.', 'Egg', 50)
+on conflict (slug) do nothing;
+
+-- Phase 5.5: Betting Configuration
+ALTER TABLE prediction_markets 
+ADD COLUMN IF NOT EXISTS bet_config JSONB DEFAULT '{"presets": [100, 500, 1000], "allow_custom": true, "min": 1, "max": 10000}';
