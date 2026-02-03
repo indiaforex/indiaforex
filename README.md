@@ -3,6 +3,57 @@
 # Visit the Deployment at https://indiaforex.vercel.app/
 # Visit the Repo at https://github.com/indiaforex/indiaforex/
 
+<<<<<<< HEAD
+> **A high-performance financial intelligence platform bridging institutional-grade market data with community-driven insights.**
+
+## 1. System Architecture
+
+The project adopts a **Serverless Hybrid Architecture**, leveraging **Next.js 15 (App Router)** for the frontend and **Supabase (PostgreSQL)** for the backend. It prioritizes "Zero-Click Latency" and real-time data synchronization.
+
+### **Core Stack**
+*   **Frontend:** Next.js 15.1, React 19, Tailwind CSS v4, Framer Motion.
+*   **Database:** PostgreSQL 15 (Supabase) with `uuid-ossp` extension.
+*   **Auth:** Supabase Auth (JWT + RLS) with Google/GitHub/Twitter OAuth providers.
+*   **State Management:** Server Actions for mutations, `unstable_cache` (ISR) for data fetching, and optimistic UI updates.
+
+### **Realtime Event Architecture**
+The application actively utilizes **Supabase Realtime (WebSockets)** to broadcast state changes instantly to connected clients.
+*   **Pub/Sub Model:** The PostgreSQL database acts as the single source of truth, broadcasting `INSERT`, `UPDATE`, and `DELETE` events via the `supabase_realtime` publication.
+*   **Active Channels:**
+    *   `notifications`: Users receive instant alerts (toast + bell badge) when mentioned or replied to, without refreshing.
+    *   `forum_comments`: Thread discussions update live as new comments are posted by other users.
+    *   `forum_categories`: Category structure updates propagate instantly (metadata sync).
+*   **Client-Side Subscription:** Implemented via `supabase.channel().on('postgres_changes', ...)` hooks in React components (`NotificationBell.tsx`, `CommentSection.tsx`).
+
+### **Data Pipeline Strategy**
+The application employs a dual-pipeline strategy for data delivery:
+
+1.  **Cold Storage (CMS/Editorial):** Using **Google Sheets via SheetDB** as a headless CMS for the Economic Calendar.
+    *   **Dual-Write Workflow:**
+        *   **Direct:** Admins can edit the Google Sheet directly.
+            > <img width="800" height="325" alt="image" src="https://github.com/user-attachments/assets/091acc08-2e17-4400-978b-83f75330612c" />
+        *   **Application:** Users with the specialized `event_analyst` role can use the **Admin Panel > Events** form to append rows to the sheet via API.
+            > <img width="800" height="390" alt="image" src="https://github.com/user-attachments/assets/20dde580-a6f7-41e0-8ad7-bc80c710e49a" />
+    *   **Read Path:** Data is cached at the edge using Next.js ISR tags (`revalidate: 60`), ensuring site resilience even if the SheetDB API is rate-limited.
+    > <img width="800" height="728" alt="image" src="https://github.com/user-attachments/assets/21791a69-3b07-4242-b297-165597a36db2" />
+ 
+2.  **Hot Storage (Market Data):** Real-time fetching via `yahoo-finance2` on the server, protected by a 15-second deduplication cache (`unstable_cache`) to prevent rate-limiting while serving thousands of concurrent users.
+
+---
+
+## 2. Technical Features
+
+### **Command Center & Dashboard**
+> <img width="800" height="407" alt="image" src="https://github.com/user-attachments/assets/a32c685e-8dee-4781-9d09-04e301b1169a" />
+
+*   **Global Market Watch:** Aggregates real-time indices (NIFTY, SENSEX, NASDAQ) using server-side fetching.
+    > <img width="800" height="991" alt="image" src="https://github.com/user-attachments/assets/f2d3419b-7f6c-4f85-b5b2-5ea19d0b9687" />
+*   **Algorithmic Scanner:** "Live Market Scanner" component runs simple heuristics (Gap Up, Volume Shock) on fetched payloads to surface opportunities instantly.
+    > <img width="800" height="271" alt="image" src="https://github.com/user-attachments/assets/4842dea6-82fc-418c-9c90-245a98ee60b6" />
+*   **Sector Heatmap:** Visualizes relative performance of top 10 constituents using color scales effectively.
+    > <img width="800" height="466" alt="image" src="https://github.com/user-attachments/assets/16da8ee2-dd65-49c8-8da9-de18dbfc03f8" />
+
+=======
 
 
 A high-performance, event-driven market dashboard for Indian Forex & Stock traders. Built with Next.js 14, Supabase, Redis, and Tailwind CSS.
@@ -100,6 +151,7 @@ The application employs a dual-pipeline strategy for data delivery:
 *   **Sector Heatmap:** Visualizes relative performance of top 10 constituents using color scales effectively.
     > <img width="800" height="466" alt="image" src="https://github.com/user-attachments/assets/16da8ee2-dd65-49c8-8da9-de18dbfc03f8" />
 
+>>>>>>> 1ea2c69 (with 10 Phase development updates)
 
 ### **Community Engine (The "Alpha" Core)**
 A from-scratch social platform built directly on Postgres.
@@ -115,6 +167,8 @@ A from-scratch social platform built directly on Postgres.
     *   Hierarchy: `Guest` > `User` > `High Level` > `Steward` > `Event Analyst` > `Admin` > `Super Admin`.
     *   **Stewards:** Can moderate *only* specific categories (e.g., "Crypto Steward" cannot moderate "Forex").
 
+<<<<<<< HEAD
+=======
 ### **Gamification Engine (Redis Powered)**
 *   **Leaderboards:** Uses Redis `ZSET` (Sorted Sets) for O(log(N)) ranking performance.
     *   `ZIDX` used to fetch user ranks instantly.
@@ -128,6 +182,7 @@ A from-scratch social platform built directly on Postgres.
     *   **Bollinger Breakout:** Standard deviation bands logic.
     *   **Performance Metrics:** The worker calculates CAGR, Drawdown, and Win Rate and stores the JSON result for instant retrieval.
 
+>>>>>>> 1ea2c69 (with 10 Phase development updates)
 ---
 
 ## 3. Engineering Challenges & Workarounds
@@ -160,6 +215,8 @@ A from-scratch social platform built directly on Postgres.
 *   **Optimization:** Configured Next.js to cache the SheetDB response for 60 seconds (`revalidate: 60`). This prevents hitting Google's strict API quotas while keeping the calendar "fresh enough" for macro news.
 *   **Resilience:** The adapter includes specific error handling for non-array responses, preventing the dashboard from crashing if the Sheet format is temporarily broken by a human editor.
 
+<<<<<<< HEAD
+=======
 ### **D. Serverless Worker Duplication**
 **Problem:** In a standard Node.js environment, `setInterval` works fine. However, in Next.js dev mode (hot reload), workers were re-initializing on every file save, creating duplicate Redis connections and double-processing jobs (e.g., sending 2 notifications for 1 event).
 **Solution:**
@@ -173,6 +230,7 @@ A from-scratch social platform built directly on Postgres.
 *   Extended this to critical actions like `CREATE_MARKET` and `RESOLVE_REPORT`.
 *   The `System Health` dashboard reads these logs alongside BullMQ metrics to provide a full operational overview without querying the main user tables.
 
+>>>>>>> 1ea2c69 (with 10 Phase development updates)
 ---
 
 ## 4. Key Security Implementation

@@ -27,7 +27,7 @@ export function PredictionList({ limit, compact, predictions = [] }: { limit?: n
                     {/* Render Logic */}
                     <div className="flex justify-between items-center bg-slate-800/30 p-2 rounded hover:bg-slate-800/50 transition-colors">
                         <span className="text-xs font-mono text-emerald-400">{market.symbol}</span>
-                        <span className="text-[10px] text-slate-400">{new Date(market.target_date).toLocaleDateString()}</span>
+                        <span className="text-[10px] text-slate-400">{new Date(market.target_date).toLocaleDateString('en-GB')}</span>
                     </div>
                     <p className="text-[11px] text-slate-300 mt-1 line-clamp-1 group-hover:text-white">{market.question}</p>
                 </Link>
