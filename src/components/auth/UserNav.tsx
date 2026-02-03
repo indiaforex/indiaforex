@@ -25,7 +25,7 @@ export function UserNav() {
     if (!user) {
         return (
             <>
-                <Button onClick={() => setShowAuthDialog(true)} size="sm" className="hidden sm:flex">
+                <Button onClick={() => setShowAuthDialog(true)} size="sm">
                     Sign In
                 </Button>
                 {/* Mobile minimal icon could go here if needed */}

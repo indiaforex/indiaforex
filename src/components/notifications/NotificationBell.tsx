@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Notification = {
     id: string;
@@ -152,7 +153,10 @@ export function NotificationBell() {
                                     >
                                         <div className="h-8 w-8 rounded bg-slate-800 shrink-0 flex items-center justify-center overflow-hidden border border-slate-700">
                                             {latest.actor.avatar_url ? (
-                                                <img src={latest.actor.avatar_url} className="h-full w-full object-cover" />
+                                                <Avatar className="h-full w-full">
+                                                    <AvatarImage src={latest.actor.avatar_url} className="object-cover" />
+                                                    <AvatarFallback>{latest.actor.username[0]}</AvatarFallback>
+                                                </Avatar>
                                             ) : (
                                                 <span className="text-xs font-bold text-slate-400">{latest.actor.username.substring(0, 2).toUpperCase()}</span>
                                             )}

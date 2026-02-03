@@ -58,24 +58,24 @@ export default function LiveMarketScanner() {
     return (
         <div className="glass-panel border-b border-slate-800 bg-slate-950/50 relative overflow-hidden">
             {/* Header / Toolbar */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
-                <div className="flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-blue-500" />
-                    <h2 className="text-sm font-bold text-slate-200 tracking-wide uppercase">
+            <div className="flex items-center justify-between px-3 sm:px-4 py-3 border-b border-slate-800 gap-2">
+                <div className="flex items-center gap-2 overflow-hidden">
+                    <Activity className="h-4 w-4 text-blue-500 shrink-0" />
+                    <h2 className="text-sm font-bold text-slate-200 tracking-wide uppercase truncate">
                         Live Market Scanner
                     </h2>
-                    <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700">
+                    <span className="hidden md:inline-block px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700 whitespace-nowrap">
                         Forex / Spot
                     </span>
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                <div className="flex items-center gap-4 shrink-0">
+                    <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 bg-emerald-500/10 rounded-full border border-emerald-500/20">
                         <span className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                         </span>
-                        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                        <span className="hidden sm:inline text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
                             Live Feed
                         </span>
                     </div>
