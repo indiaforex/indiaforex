@@ -5,7 +5,12 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { IndicesWatchlist } from "@/components/dashboard/IndicesWatchlist";
 import TradersOnline from "@/components/dashboard/TradersOnline";
 import { ForumHighlights } from "@/components/forum/ForumHighlights";
-import { PredictionList } from "@/components/predictions/PredictionList";
+
+// import { PredictionCarousel } from "@/components/predictions/PredictionCarousel";
+const PredictionCarousel = dynamic(() => import("@/components/predictions/PredictionCarousel").then(mod => mod.PredictionCarousel), {
+    ssr: false,
+    loading: () => <div className="h-48 bg-slate-900/50 animate-pulse rounded-xl border border-slate-800" />
+});
 import EconomicCalendar from "@/components/dashboard/EconomicCalendar";
 
 // Dynamic Imports (Moved from page.tsx)
@@ -22,9 +27,19 @@ interface DashboardClientProps {
     events: any;
     threads: any;
     predictions: any;
+    user?: any;
+    userPoints?: number;
+    userBets?: any[];
 }
 
-export default function DashboardClient({ events, threads, predictions }: DashboardClientProps) {
+export default function DashboardClient({
+    events,
+    threads,
+    predictions,
+    user,
+    userPoints = 0,
+    userBets = []
+}: DashboardClientProps) {
     return (
         <DashboardLayout
             leftSidebar={
@@ -41,11 +56,7 @@ export default function DashboardClient({ events, threads, predictions }: Dashbo
                         <AdContainer />
                     </div>
 
-                    <h3 className="text-sm font-bold text-slate-400 mb-3 flex items-center gap-2">
-                        {/* Icon omitted for brevity in match */}
-                        Trending Predictions
-                    </h3>
-                    <PredictionList limit={3} compact predictions={predictions} />
+
 
                     {/* Footer Credits */}
                     <div className="shrink-0 border-t border-slate-800 pt-4 text-[10px] text-slate-500 font-mono space-y-2 text-center pb-2 bg-background z-10">
@@ -63,8 +74,14 @@ export default function DashboardClient({ events, threads, predictions }: Dashbo
                     <MarketTicker />
                 </div>
 
+
                 <LiveMarketScanner />
-                <PredictionList predictions={predictions} />
+                <PredictionCarousel
+                    markets={predictions}
+                    user={user}
+                    userPoints={userPoints}
+                    userBets={userBets}
+                />
                 <EconomicCalendar data={events} />
 
                 {/* Mobile-Only News Feed & Heatmap */}

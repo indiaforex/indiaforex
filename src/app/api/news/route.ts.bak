@@ -1,0 +1,16 @@
+import { NextResponse } from 'next/server';
+import Parser from 'rss-parser';
+
+export const revalidate = 0;
+
+export async function GET() {
+    console.log("News Route Hitting");
+    try {
+        const parser = new Parser();
+        const feed = await parser.parseURL("https://www.moneycontrol.com/rss/latestnews.xml");
+        return NextResponse.json({ status: 'ok', title: feed.title });
+    } catch (e: any) {
+        console.error("News Route failed:", e);
+        return NextResponse.json({ status: 'error', error: e.toString() }, { status: 500 });
+    }
+}

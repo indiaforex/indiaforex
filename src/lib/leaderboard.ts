@@ -22,14 +22,30 @@ export async function getTopUsers(limit: number = 10): Promise<LeaderboardEntry[
     // We get [userId, score, userId, score] flat array from some clients, but Upstash SDK might return objects depending on config.
     // Upstash's zrange with { withScores: true } returns objects { member, score }
 
-    const topUsersWithScores = await upstashRedis.zrange(LEADERBOARD_KEY, 0, limit - 1, {
+    const response = await upstashRedis.zrange(LEADERBOARD_KEY, 0, limit - 1, {
         rev: true,
         withScores: true
     });
 
-    if (!topUsersWithScores.length) return [];
+    if (!response.length) return [];
 
-    const userIds = topUsersWithScores.map((u: any) => u.member as string);
+    // Normalizing Upstash Response (Flat Array vs Object Array)
+    const topUsersWithScores: { member: string; score: number }[] = [];
+    if (typeof response[0] === 'string' && typeof response[1] === 'number') {
+        // Flat Array: [id1, score1, id2, score2]
+        for (let i = 0; i < response.length; i += 2) {
+            topUsersWithScores.push({
+                member: response[i] as string,
+                score: response[i + 1] as number
+            });
+        }
+    } else {
+        // Object Array: [{ member, score }]
+        // @ts-ignore
+        topUsersWithScores.push(...response);
+    }
+
+    const userIds = topUsersWithScores.map((u) => u.member);
 
     // Fetch user details from Supabase
     // Ideally we cache this too, but for MVB this is fine
