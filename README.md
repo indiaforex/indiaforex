@@ -3,7 +3,6 @@
 # Visit the Deployment at https://indiaforex.vercel.app/
 # Visit the Repo at https://github.com/indiaforex/indiaforex/
 
-<<<<<<< HEAD
 > **A high-performance financial intelligence platform bridging institutional-grade market data with community-driven insights.**
 
 ## 1. System Architecture
@@ -151,12 +150,9 @@ The application employs a dual-pipeline strategy for data delivery:
 *   **Sector Heatmap:** Visualizes relative performance of top 10 constituents using color scales effectively.
     > <img width="800" height="466" alt="image" src="https://github.com/user-attachments/assets/16da8ee2-dd65-49c8-8da9-de18dbfc03f8" />
 
->>>>>>> 1ea2c69 (with 10 Phase development updates)
-
 ### **Community Engine (The "Alpha" Core)**
 A from-scratch social platform built directly on Postgres.
 > <img width="800" height="407" alt="image" src="https://github.com/user-attachments/assets/353a37e9-6d00-43f2-9658-99b59294d0e8" />
-
 
 *   **Recursive Threading:** Supports infinite nesting for deep discussions.
     > <img width="800" height="303" alt="image" src="https://github.com/user-attachments/assets/a21c00b1-2ff8-4f64-9c11-0921387c7e41" />
@@ -167,8 +163,7 @@ A from-scratch social platform built directly on Postgres.
     *   Hierarchy: `Guest` > `User` > `High Level` > `Steward` > `Event Analyst` > `Admin` > `Super Admin`.
     *   **Stewards:** Can moderate *only* specific categories (e.g., "Crypto Steward" cannot moderate "Forex").
 
-<<<<<<< HEAD
-=======
+
 ### **Gamification Engine (Redis Powered)**
 *   **Leaderboards:** Uses Redis `ZSET` (Sorted Sets) for O(log(N)) ranking performance.
     *   `ZIDX` used to fetch user ranks instantly.
@@ -182,7 +177,6 @@ A from-scratch social platform built directly on Postgres.
     *   **Bollinger Breakout:** Standard deviation bands logic.
     *   **Performance Metrics:** The worker calculates CAGR, Drawdown, and Win Rate and stores the JSON result for instant retrieval.
 
->>>>>>> 1ea2c69 (with 10 Phase development updates)
 ---
 
 ## 3. Engineering Challenges & Workarounds
@@ -215,8 +209,6 @@ A from-scratch social platform built directly on Postgres.
 *   **Optimization:** Configured Next.js to cache the SheetDB response for 60 seconds (`revalidate: 60`). This prevents hitting Google's strict API quotas while keeping the calendar "fresh enough" for macro news.
 *   **Resilience:** The adapter includes specific error handling for non-array responses, preventing the dashboard from crashing if the Sheet format is temporarily broken by a human editor.
 
-<<<<<<< HEAD
-=======
 ### **D. Serverless Worker Duplication**
 **Problem:** In a standard Node.js environment, `setInterval` works fine. However, in Next.js dev mode (hot reload), workers were re-initializing on every file save, creating duplicate Redis connections and double-processing jobs (e.g., sending 2 notifications for 1 event).
 **Solution:**
@@ -230,7 +222,6 @@ A from-scratch social platform built directly on Postgres.
 *   Extended this to critical actions like `CREATE_MARKET` and `RESOLVE_REPORT`.
 *   The `System Health` dashboard reads these logs alongside BullMQ metrics to provide a full operational overview without querying the main user tables.
 
->>>>>>> 1ea2c69 (with 10 Phase development updates)
 ---
 
 ## 4. Key Security Implementation
