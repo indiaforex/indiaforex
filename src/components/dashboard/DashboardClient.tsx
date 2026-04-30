@@ -62,7 +62,7 @@ export default function DashboardClient({
                     <div className="shrink-0 border-t border-slate-800 pt-4 text-[10px] text-slate-500 font-mono space-y-2 text-center pb-2 bg-background z-10">
                         <p className="font-bold">© IndiaForex 2025</p>
                         <p>
-                            Temporary build developed by <span className="text-slate-400">Shashank Anand</span> and operated by <span className="text-slate-400">Naman Arora</span>.
+                            Temporary build developed by <span className="text-slate-400">Shashank Anand</span>.
                         </p>
                     </div>
                 </>
